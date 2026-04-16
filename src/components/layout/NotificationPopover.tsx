@@ -35,27 +35,33 @@ export function NotificationPopover() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative rounded-full border border-slate-200/70 bg-white/70 shadow-sm hover:bg-white">
           <Bell className="size-4" />
           {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 flex size-4 items-center justify-center p-0 text-[10px]"
-            >
+            <>
+              <span className="absolute -top-0.5 -right-0.5 inline-flex size-2 rounded-full bg-red-500 ring-2 ring-white" />
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px]"
+              >
               {unreadCount > 9 ? "9+" : unreadCount}
-            </Badge>
+              </Badge>
+            </>
           )}
           <span className="sr-only">Notifikasi</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
-        <div className="flex items-center justify-between px-4 py-3">
-          <h4 className="text-sm font-semibold">Notifikasi</h4>
+      <PopoverContent align="end" className="w-88 overflow-hidden border-slate-200/70 bg-white/95 p-0 shadow-xl backdrop-blur-md">
+        <div className="flex items-center justify-between border-b border-slate-200/70 bg-slate-50/80 px-4 py-3">
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900">Notifikasi</h4>
+            <p className="text-[11px] text-slate-500">{unreadCount} belum dibaca</p>
+          </div>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-auto px-2 py-1 text-xs"
+              className="h-auto rounded-md px-2 py-1 text-xs"
               onClick={markAllAsRead}
             >
               <Check className="mr-1 size-3" />
@@ -63,23 +69,23 @@ export function NotificationPopover() {
             </Button>
           )}
         </div>
-        <Separator />
+
         <ScrollArea className="max-h-80">
           {notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-              <Bell className="mb-2 size-8 opacity-50" />
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+              <Bell className="mb-2 size-8 opacity-40" />
               <p className="text-sm">Tidak ada notifikasi</p>
             </div>
           ) : (
-            <div className="flex flex-col">
+            <div className="flex flex-col p-2">
               {notifications.map((notification) => {
                 const Icon = typeIcon[notification.type];
                 return (
                   <div
                     key={notification.id}
                     className={cn(
-                      "group flex gap-3 px-4 py-3 transition-colors hover:bg-muted/50",
-                      !notification.read && "bg-muted/30"
+                      "group relative mb-1 flex gap-3 rounded-lg border border-transparent px-3 py-3 transition-all hover:border-slate-200 hover:bg-slate-50/80",
+                      !notification.read && "border-slate-200/70 bg-slate-100/70"
                     )}
                   >
                     <div className={cn("mt-0.5 shrink-0", typeColor[notification.type])}>
@@ -98,7 +104,7 @@ export function NotificationPopover() {
                         <Button
                           variant="ghost"
                           size="icon-xs"
-                          className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                          className="shrink-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
                           onClick={() => removeNotification(notification.id)}
                         >
                           <X className="size-3" />
@@ -115,7 +121,7 @@ export function NotificationPopover() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-auto px-1.5 py-0.5 text-[11px]"
+                            className="h-auto rounded-md px-1.5 py-0.5 text-[11px]"
                             onClick={() => markAsRead(notification.id)}
                           >
                             Tandai dibaca
@@ -129,6 +135,7 @@ export function NotificationPopover() {
             </div>
           )}
         </ScrollArea>
+        {notifications.length > 0 && <Separator />}
       </PopoverContent>
     </Popover>
   );

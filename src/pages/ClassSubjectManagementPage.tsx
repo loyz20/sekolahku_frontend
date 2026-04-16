@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -64,8 +64,10 @@ import { useNotification } from "@/hooks/use-notification";
 
 export default function ClassSubjectManagementPage() {
   const { notify } = useNotification();
+  const [searchParams] = useSearchParams();
+  const lockedClassId = searchParams.get("class_id") || "";
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const limit = 100;
 
   // Dialogs
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -74,21 +76,21 @@ export default function ClassSubjectManagementPage() {
 
   // Form state
   const [formData, setFormData] = useState({
-    class_id: "",
+    class_id: lockedClassId || "",
     subject_ids: [] as string[],
     academic_year_id: "",
   });
 
   const resetCreateForm = () => {
     setFormData({
-      class_id: "",
+      class_id: lockedClassId || "",
       subject_ids: [],
       academic_year_id: "",
     });
   };
 
   // Filters
-  const [filterClassId, setFilterClassId] = useState("");
+  const [filterClassId, setFilterClassId] = useState(lockedClassId || "");
   const [filterSubjectId, setFilterSubjectId] = useState("");
   const [filterAcademicYearId, setFilterAcademicYearId] = useState("");
 
@@ -111,13 +113,22 @@ export default function ClassSubjectManagementPage() {
   const { data: mappingsData, isLoading, refetch } = useQuery({
     queryKey: [
       "classSubjects",
-      { page, limit, filterClassId, filterSubjectId, filterAcademicYearId },
+      {
+        page,
+        limit,
+        filterClassId,
+        filterSubjectId,
+        filterAcademicYearId,
+        lockedClassId,
+      },
     ],
     queryFn: () =>
       scheduleService.listClassSubjects({
         page,
         limit,
-        class_id: filterClassId ? parseInt(filterClassId) : undefined,
+        class_id: (lockedClassId || filterClassId)
+          ? parseInt(lockedClassId || filterClassId)
+          : undefined,
         subject_id: filterSubjectId ? parseInt(filterSubjectId) : undefined,
         academic_year_id: filterAcademicYearId
           ? parseInt(filterAcademicYearId)
@@ -219,7 +230,7 @@ export default function ClassSubjectManagementPage() {
 
       setShowCreateDialog(false);
       setFormData({
-        class_id: "",
+        class_id: lockedClassId || "",
         subject_ids: [],
         academic_year_id: "",
       });
@@ -270,6 +281,11 @@ export default function ClassSubjectManagementPage() {
     [classesData?.data, formData.class_id]
   );
 
+  const lockedClass = useMemo(
+    () => classesData?.data?.find((cls) => cls.id === Number(lockedClassId)),
+    [classesData?.data, lockedClassId]
+  );
+
   const selectedSubjects = useMemo(
     () =>
       subjectsData?.data?.filter((subject) =>
@@ -292,7 +308,7 @@ export default function ClassSubjectManagementPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="mb-2">
-            <Link to="/jadwal">
+            <Link to={lockedClassId ? `/kelas/${lockedClassId}` : "/jadwal"}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Kembali
             </Link>
@@ -323,27 +339,38 @@ export default function ClassSubjectManagementPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Kelas</Label>
-              <Select
-                value={filterClassId || "all"}
-                onValueChange={(value) =>
-                  setFilterClassId(value === "all" ? "" : value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Semua kelas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua kelas</SelectItem>
-                  {classesData?.data?.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id.toString()}>
-                      {cls.code} - {cls.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {lockedClassId ? (
+              <div className="space-y-2">
+                <Label>Kelas</Label>
+                <div className="rounded-md border bg-slate-50 px-3 py-2 text-sm">
+                  {lockedClass
+                    ? `${lockedClass.code} - ${lockedClass.name}`
+                    : "Memuat kelas..."}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Kelas</Label>
+                <Select
+                  value={filterClassId || "all"}
+                  onValueChange={(value) =>
+                    setFilterClassId(value === "all" ? "" : value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Semua kelas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua kelas</SelectItem>
+                    {classesData?.data?.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id.toString()}>
+                        {cls.code} - {cls.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Mata Pelajaran</Label>
@@ -523,7 +550,7 @@ export default function ClassSubjectManagementPage() {
           if (!open) resetCreateForm();
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-4 w-4 text-emerald-600" />
@@ -534,32 +561,45 @@ export default function ClassSubjectManagementPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-5">
+          <div className="max-h-[calc(90vh-13rem)] space-y-5 overflow-y-auto pr-1">
             <div className="rounded-md border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-800">
               Pastikan tahun akademik yang dipilih sesuai periode aktif agar jadwal dapat disusun dengan benar.
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="class-select">1. Pilih Kelas</Label>
-              <Select
-                value={formData.class_id}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, class_id: value })
-                }
-              >
-                <SelectTrigger id="class-select">
-                  <SelectValue placeholder="Pilih kelas" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classesData?.data?.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id.toString()}>
-                      {cls.code} - {cls.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {lockedClassId ? (
+                <div
+                  id="class-select"
+                  className="rounded-md border bg-slate-50 px-3 py-2 text-sm"
+                >
+                  {lockedClass
+                    ? `${lockedClass.code} - ${lockedClass.name}`
+                    : "Memuat kelas..."}
+                </div>
+              ) : (
+                <Select
+                  value={formData.class_id}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, class_id: value })
+                  }
+                >
+                  <SelectTrigger id="class-select">
+                    <SelectValue placeholder="Pilih kelas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classesData?.data?.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id.toString()}>
+                        {cls.code} - {cls.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <p className="text-xs text-muted-foreground">
-                Contoh: X IPA 1, XI IPS 2, XII Bahasa.
+                {lockedClassId
+                  ? "Kelas dikunci dari halaman detail kelas."
+                  : "Contoh: X IPA 1, XI IPS 2, XII Bahasa."}
               </p>
             </div>
 

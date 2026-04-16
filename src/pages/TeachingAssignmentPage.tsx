@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowLeft,
   AlertCircle,
   Loader2,
   Plus,
@@ -288,6 +290,12 @@ export default function TeachingAssignmentPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
+          <Button variant="ghost" size="sm" asChild className="mb-2">
+            <Link to="/jadwal">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Kembali
+            </Link>
+          </Button>
           <h1 className="text-3xl font-bold tracking-tight">
             Manajemen Penugasan Guru
           </h1>
@@ -522,7 +530,7 @@ export default function TeachingAssignmentPage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-125">
+        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-125">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-4 w-4 text-emerald-600" />
@@ -533,7 +541,7 @@ export default function TeachingAssignmentPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-5">
+          <div className="max-h-[calc(90vh-13rem)] space-y-5 overflow-y-auto pr-1">
             <div className="rounded-md border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-800">
               Anda bisa menugaskan 1 guru ke beberapa kelas sekaligus untuk mata pelajaran yang sama.
             </div>

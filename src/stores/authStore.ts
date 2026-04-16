@@ -62,6 +62,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("selectedAcademicYearId");
+    localStorage.removeItem("selectedAcademicYearCode");
+    localStorage.removeItem("selectedAcademicYearName");
     set({ user: null, token: null, isAuthenticated: false, isHydrated: true });
   },
 

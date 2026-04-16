@@ -1,13 +1,21 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { toast } from "sonner";
 import axios from "axios";
 import { userService } from "@/services/userService";
-import type { UserProfile } from "@/types";
+import { teacherService } from "@/services/teacherService";
+import type { TeacherDetail, UserProfile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -34,11 +42,19 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  // Edit teacher fields
+  const [teacherProfile, setTeacherProfile] = useState<TeacherDetail | null>(null);
+  const [isLoadingTeacher, setIsLoadingTeacher] = useState(false);
+  const [isSavingTeacher, setIsSavingTeacher] = useState(false);
+  const [teacherPlaceOfBirth, setTeacherPlaceOfBirth] = useState("");
+  const [teacherDateOfBirth, setTeacherDateOfBirth] = useState("");
+  const [teacherGender, setTeacherGender] = useState("-");
+  const [teacherAddress, setTeacherAddress] = useState("");
+  const [teacherPhone, setTeacherPhone] = useState("");
+  const [teacherSpecialization, setTeacherSpecialization] = useState("");
+  const [teacherQualification, setTeacherQualification] = useState("");
 
-  async function loadProfile() {
+  const loadProfile = useCallback(async () => {
     setIsLoadingProfile(true);
     try {
       const res = await userService.getProfile();
@@ -46,6 +62,7 @@ export default function ProfilePage() {
       setName(res.data.name);
       setNip(res.data.nip ?? "");
       setEmail(res.data.email);
+      await loadLinkedTeacher(res.data);
     } catch (err) {
       const message =
         axios.isAxiosError(err) && err.response?.data?.message
@@ -54,6 +71,61 @@ export default function ProfilePage() {
       toast.error(message);
     } finally {
       setIsLoadingProfile(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  async function loadLinkedTeacher(userProfile: UserProfile) {
+    const hasTeacherDuty = userProfile.duties.some(
+      (duty) => duty.code === "guru" || duty.duty_name.toLowerCase().includes("guru")
+    );
+
+    if (!hasTeacherDuty) {
+      setTeacherProfile(null);
+      return;
+    }
+
+    setIsLoadingTeacher(true);
+    try {
+      const searchKeyword = userProfile.email || userProfile.nip || userProfile.name;
+      const teacherListRes = await teacherService.list({
+        limit: 100,
+        search: searchKeyword || undefined,
+      });
+
+      const match =
+        teacherListRes.data.find((teacher) => teacher.email === userProfile.email) ||
+        teacherListRes.data.find((teacher) => teacher.nip === userProfile.nip) ||
+        teacherListRes.data.find((teacher) => teacher.name === userProfile.name) ||
+        null;
+
+      if (!match) {
+        setTeacherProfile(null);
+        return;
+      }
+
+      const teacherDetailRes = await teacherService.getById(match.id);
+      const teacher = teacherDetailRes.data;
+
+      setTeacherProfile(teacher);
+      setTeacherPlaceOfBirth(teacher.place_of_birth ?? "");
+      setTeacherDateOfBirth(teacher.date_of_birth ?? "");
+      setTeacherGender(teacher.gender ?? "-");
+      setTeacherAddress(teacher.address ?? "");
+      setTeacherPhone(teacher.phone ?? "");
+      setTeacherSpecialization(teacher.specialization ?? "");
+      setTeacherQualification(teacher.qualification ?? "");
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.message
+          ? err.response.data.message
+          : "Gagal memuat data guru";
+      toast.error(message);
+    } finally {
+      setIsLoadingTeacher(false);
     }
   }
 
@@ -121,6 +193,62 @@ export default function ProfilePage() {
       toast.error(message);
     } finally {
       setIsSavingPassword(false);
+    }
+  }
+
+  async function handleUpdateTeacherFields(e: FormEvent) {
+    e.preventDefault();
+    if (!teacherProfile) return;
+
+    const updates: Record<string, string | null> = {};
+    if (teacherPlaceOfBirth !== (teacherProfile.place_of_birth ?? "")) {
+      updates.place_of_birth = teacherPlaceOfBirth || null;
+    }
+    if (teacherDateOfBirth !== (teacherProfile.date_of_birth ?? "")) {
+      updates.date_of_birth = teacherDateOfBirth || null;
+    }
+    if (teacherGender !== (teacherProfile.gender ?? "-")) {
+      updates.gender = teacherGender === "-" ? null : teacherGender;
+    }
+    if (teacherAddress !== (teacherProfile.address ?? "")) {
+      updates.address = teacherAddress || null;
+    }
+    if (teacherPhone !== (teacherProfile.phone ?? "")) {
+      updates.phone = teacherPhone || null;
+    }
+    if (teacherSpecialization !== (teacherProfile.specialization ?? "")) {
+      updates.specialization = teacherSpecialization || null;
+    }
+    if (teacherQualification !== (teacherProfile.qualification ?? "")) {
+      updates.qualification = teacherQualification || null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      toast.info("Tidak ada perubahan data guru");
+      return;
+    }
+
+    setIsSavingTeacher(true);
+    try {
+      const res = await teacherService.update(teacherProfile.id, updates);
+      const updated = res.data;
+      setTeacherProfile(updated);
+      setTeacherPlaceOfBirth(updated.place_of_birth ?? "");
+      setTeacherDateOfBirth(updated.date_of_birth ?? "");
+      setTeacherGender(updated.gender ?? "-");
+      setTeacherAddress(updated.address ?? "");
+      setTeacherPhone(updated.phone ?? "");
+      setTeacherSpecialization(updated.specialization ?? "");
+      setTeacherQualification(updated.qualification ?? "");
+      toast.success("Data guru berhasil diperbarui");
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.message
+          ? err.response.data.message
+          : "Gagal memperbarui data guru";
+      toast.error(message);
+    } finally {
+      setIsSavingTeacher(false);
     }
   }
 
@@ -208,6 +336,116 @@ export default function ProfilePage() {
 
         {/* Edit Forms */}
         <div className="space-y-6 lg:col-span-2">
+          {/* Update Teacher Fields */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Edit Data Guru</CardTitle>
+              <CardDescription>
+                Perbarui field profil guru yang terhubung dengan akun ini
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleUpdateTeacherFields}>
+              <CardContent className="space-y-4">
+                {isLoadingTeacher ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Memuat data guru...
+                  </div>
+                ) : !teacherProfile ? (
+                  <p className="text-sm text-muted-foreground">
+                    Data guru tidak ditemukan untuk akun ini.
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="teacherPlaceOfBirth">Tempat Lahir</Label>
+                        <Input
+                          id="teacherPlaceOfBirth"
+                          value={teacherPlaceOfBirth}
+                          onChange={(e) => setTeacherPlaceOfBirth(e.target.value)}
+                          placeholder="Opsional"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="teacherDateOfBirth">Tanggal Lahir</Label>
+                        <Input
+                          id="teacherDateOfBirth"
+                          type="date"
+                          value={teacherDateOfBirth}
+                          onChange={(e) => setTeacherDateOfBirth(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="teacherGender">Gender</Label>
+                      <Select value={teacherGender} onValueChange={setTeacherGender}>
+                        <SelectTrigger id="teacherGender">
+                          <SelectValue placeholder="Pilih gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="-">Tidak ditentukan</SelectItem>
+                          <SelectItem value="M">Laki-laki</SelectItem>
+                          <SelectItem value="F">Perempuan</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="teacherAddress">Alamat</Label>
+                      <Input
+                        id="teacherAddress"
+                        value={teacherAddress}
+                        onChange={(e) => setTeacherAddress(e.target.value)}
+                        placeholder="Opsional"
+                      />
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="teacherPhone">No. HP</Label>
+                        <Input
+                          id="teacherPhone"
+                          value={teacherPhone}
+                          onChange={(e) => setTeacherPhone(e.target.value)}
+                          placeholder="Opsional"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="teacherSpecialization">Mata Pelajaran/Keahlian</Label>
+                        <Input
+                          id="teacherSpecialization"
+                          value={teacherSpecialization}
+                          onChange={(e) => setTeacherSpecialization(e.target.value)}
+                          placeholder="Opsional"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="teacherQualification">Kualifikasi Pendidikan</Label>
+                      <Input
+                        id="teacherQualification"
+                        value={teacherQualification}
+                        onChange={(e) => setTeacherQualification(e.target.value)}
+                        placeholder="Opsional"
+                      />
+                    </div>
+                  </>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button type="submit" disabled={isSavingTeacher || !teacherProfile || isLoadingTeacher}>
+                  {isSavingTeacher && (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  )}
+                  Simpan Data Guru
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+
           {/* Update Profile */}
           <Card>
             <CardHeader>

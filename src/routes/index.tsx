@@ -20,7 +20,6 @@ import SubjectManagementPage from "@/pages/SubjectManagementPage";
 import SubjectDetailPage from "@/pages/SubjectDetailPage";
 import ScheduleManagementPage from "@/pages/ScheduleManagementPage";
 import ClassSubjectManagementPage from "@/pages/ClassSubjectManagementPage";
-import TeachingAssignmentPage from "@/pages/TeachingAssignmentPage";
 import ScoreManagementPage from "@/pages/ScoreManagementPage";
 
 export const router = createBrowserRouter([
@@ -52,7 +51,6 @@ export const router = createBrowserRouter([
           { path: "/kelas/:id", element: <ClassDetailPage /> },
           { path: "/jadwal", element: <ScheduleManagementPage /> },
           { path: "/jadwal/class-subjects", element: <ClassSubjectManagementPage /> },
-          { path: "/jadwal/teaching-assignments", element: <TeachingAssignmentPage /> },
           { path: "/profil", element: <ProfilePage /> },
           { path: "/pengaturan", element: <SettingsPage /> },
           { path: "/health", element: <HealthStatusPage /> },

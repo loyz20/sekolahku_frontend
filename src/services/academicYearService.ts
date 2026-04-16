@@ -10,6 +10,14 @@ import type {
 } from "@/types";
 
 export const academicYearService = {
+  async listPublic(params?: AcademicYearListParams) {
+    const res = await api.get<PaginatedResponse<AcademicYear>>(
+      "/v1/academic-years/public",
+      { params }
+    );
+    return res.data;
+  },
+
   async list(params?: AcademicYearListParams) {
     const res = await api.get<PaginatedResponse<AcademicYear>>(
       "/v1/academic-years",

@@ -55,27 +55,31 @@ export function AppSidebar() {
     .filter((group) => group.items.length > 0);
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
+    <Sidebar collapsible="icon" variant="floating" className="border-0">
+      <SidebarHeader className="p-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              className="h-14 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/30 px-3 shadow-sm"
+            >
               <Link to="/">
                 {logoUrl ? (
-                  <Avatar size="sm" className="rounded-lg">
+                  <Avatar size="sm" className="rounded-lg ring-1 ring-sidebar-border/70">
                     <AvatarImage src={logoUrl} alt={schoolName} />
                     <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
                       <GraduationCap className="size-4" />
                     </AvatarFallback>
                   </Avatar>
                 ) : (
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
                     <GraduationCap className="size-4" />
                   </div>
                 )}
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{schoolName}</span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate font-semibold tracking-tight">{schoolName}</span>
+                  <span className="truncate text-xs text-muted-foreground/90">
                     {schoolLevel}
                   </span>
                 </div>
@@ -85,12 +89,14 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-1 pb-2">
         {filteredSidebarNav.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+          <SidebarGroup key={group.label} className="px-2 py-1">
+            <SidebarGroupLabel className="px-2 text-[11px] uppercase tracking-[0.12em] text-sidebar-foreground/55">
+              {group.label}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-1">
                 {group.items.map((item) => {
                   const isActive = location.pathname === item.url;
                   return (
@@ -99,6 +105,7 @@ export function AppSidebar() {
                         asChild
                         isActive={isActive}
                         tooltip={item.title}
+                        className="h-9 rounded-lg px-2.5 text-sidebar-foreground/90 transition-all hover:bg-sidebar-accent/70 hover:translate-x-0.5 data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-sm"
                       >
                         <Link to={item.url}>
                           <item.icon />
@@ -106,7 +113,9 @@ export function AppSidebar() {
                         </Link>
                       </SidebarMenuButton>
                       {item.badge && (
-                        <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+                        <SidebarMenuBadge className="rounded-full bg-sidebar-primary/15 px-1.5 text-[10px] text-sidebar-primary">
+                          {item.badge}
+                        </SidebarMenuBadge>
                       )}
                     </SidebarMenuItem>
                   );
@@ -117,19 +126,23 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="p-3 pt-1">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              className="h-14 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/25 px-3"
+            >
               <Link to="/profil">
-                <Avatar size="sm">
-                  <AvatarFallback>
+                <Avatar size="sm" className="ring-1 ring-sidebar-border/70">
+                  <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary">
                     {user?.name ? getInitials(user.name) : "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{user?.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate text-xs capitalize text-muted-foreground/90">
                     {user?.primaryRole}
                   </span>
                 </div>

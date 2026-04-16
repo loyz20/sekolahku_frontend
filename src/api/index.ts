@@ -11,9 +11,16 @@ const api = axios.create({
 // Attach JWT token to every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
+  const selectedAcademicYearId = localStorage.getItem("selectedAcademicYearId");
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  if (selectedAcademicYearId) {
+    config.headers["X-Academic-Year-Id"] = selectedAcademicYearId;
+  }
+
   return config;
 });
 

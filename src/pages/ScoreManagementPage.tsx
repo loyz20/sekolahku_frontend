@@ -116,7 +116,10 @@ export default function ScoreManagementPage() {
       setClasses(classRes.data);
       setSubjects(subjectRes.data);
       setAssessments(assessmentRes.data);
-      setActiveAcademicYear(academicYearRes.data.find((ay) => ay.is_active) || null);
+      const selectedAcademicYearId = Number(localStorage.getItem("selectedAcademicYearId") || 0);
+      const selectedAcademicYear = academicYearRes.data.find((ay) => ay.id === selectedAcademicYearId) || null;
+      const activeYear = academicYearRes.data.find((ay) => ay.is_active) || null;
+      setActiveAcademicYear(selectedAcademicYear || activeYear);
     } catch (err) {
       const message =
         axios.isAxiosError(err) && err.response?.data?.message
