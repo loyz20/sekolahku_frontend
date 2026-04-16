@@ -679,6 +679,89 @@ export interface TeachingAssignmentListParams {
   include_inactive?: boolean;
 }
 
+// Attendance (Absensi Pertemuan) types
+export type AttendanceStatus = "HADIR" | "SAKIT" | "IZIN" | "ALPA";
+
+export interface AttendanceMeetingListItem {
+  id: number;
+  meeting_no: number;
+  meeting_date: string;
+  topic: string | null;
+  created_at: string;
+  attendance_count: number;
+  teaching_assignment: {
+    id: number;
+    class: { id: number; code: string; name: string };
+    subject: { id: number; code: string; name: string };
+    teacher: { id: number; name: string; nip: string | null };
+    academic_year: { id: number; code: string; name: string };
+  };
+}
+
+export interface AttendanceRecordItem {
+  id: number;
+  student: {
+    id: number;
+    nis: string;
+    name: string;
+  };
+  status: AttendanceStatus;
+  notes: string | null;
+  marked_at: string;
+  updated_at: string;
+}
+
+export interface AttendanceMeetingDetail {
+  id: number;
+  meeting_no: number;
+  meeting_date: string;
+  topic: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  teaching_assignment: {
+    id: number;
+    class: { id: number; code: string; name: string };
+    subject: { id: number; code: string; name: string };
+    teacher: { id: number; name: string; nip: string | null };
+    academic_year: { id: number; code: string; name: string };
+  };
+  attendance: AttendanceRecordItem[];
+}
+
+export interface AttendanceMeetingListParams {
+  page?: number;
+  limit?: number;
+  class_id?: number;
+  subject_id?: number;
+  teacher_id?: number;
+  academic_year_id?: number;
+  meeting_date?: string;
+}
+
+export interface CreateAttendanceMeetingRequest {
+  teaching_assignment_id: number;
+  meeting_no?: number;
+  meeting_date: string;
+  topic?: string;
+  notes?: string;
+}
+
+export interface UpdateAttendanceMeetingRequest {
+  meeting_no?: number;
+  meeting_date?: string;
+  topic?: string | null;
+  notes?: string | null;
+}
+
+export interface UpsertMeetingAttendanceRequest {
+  records: Array<{
+    student_id: number;
+    status: AttendanceStatus;
+    notes?: string;
+  }>;
+}
+
 // Assessment & Score types
 export interface AssessmentItem {
   id: number;

@@ -320,7 +320,7 @@ export default function UserManagementPage() {
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               className="w-full sm:w-48"
             />
-            <Button onClick={handleSearch}>
+            <Button onClick={handleSearch} className="w-full sm:w-auto">
               <Search className="mr-2 size-4" />
               Cari
             </Button>
@@ -353,19 +353,19 @@ export default function UserManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>NIP</TableHead>
+                    <TableHead className="hidden sm:table-cell">NIP</TableHead>
                     <TableHead>Nama</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead>Tugas</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Dibuat</TableHead>
+                    <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
                     <TableHead className="w-12" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                         {user.nip ?? "-"}
                       </TableCell>
                       <TableCell className="font-medium">
@@ -384,7 +384,7 @@ export default function UserManagementPage() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
                         {user.email}
                       </TableCell>
                       <TableCell>
@@ -408,7 +408,7 @@ export default function UserManagementPage() {
                           {user.is_active ? "Aktif" : "Nonaktif"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                         {user.created_at}
                       </TableCell>
                       <TableCell>

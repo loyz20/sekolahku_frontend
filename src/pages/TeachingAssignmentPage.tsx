@@ -419,11 +419,11 @@ export default function TeachingAssignmentPage() {
                     <TableRow>
                       <TableHead>Guru</TableHead>
                       <TableHead>Kelas</TableHead>
-                      <TableHead>Mata Pelajaran</TableHead>
-                      <TableHead>Tahun Akademik</TableHead>
+                      <TableHead className="hidden md:table-cell">Mata Pelajaran</TableHead>
+                      <TableHead className="hidden lg:table-cell">Tahun Akademik</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Tanggal Penugasan</TableHead>
-                      <TableHead>Catatan</TableHead>
+                      <TableHead className="hidden md:table-cell">Tanggal Penugasan</TableHead>
+                      <TableHead className="hidden lg:table-cell">Catatan</TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -434,8 +434,8 @@ export default function TeachingAssignmentPage() {
                           {assignment.teacher.name}
                         </TableCell>
                         <TableCell>{assignment.class.code}</TableCell>
-                        <TableCell>{assignment.subject.name}</TableCell>
-                        <TableCell>{assignment.academic_year.code}</TableCell>
+                        <TableCell className="hidden md:table-cell">{assignment.subject.name}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{assignment.academic_year.code}</TableCell>
                         <TableCell>
                           <Badge
                             variant={
@@ -445,12 +445,12 @@ export default function TeachingAssignmentPage() {
                             {assignment.is_active ? "Aktif" : "Tidak Aktif"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600">
+                        <TableCell className="hidden text-sm text-gray-600 md:table-cell">
                           {new Date(assignment.assigned_at).toLocaleDateString(
                             "id-ID"
                           )}
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell className="hidden text-sm lg:table-cell">
                           {assignment.notes ? (
                             <span className="max-w-xs truncate">
                               {assignment.notes}

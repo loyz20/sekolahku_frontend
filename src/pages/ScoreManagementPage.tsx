@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { classService } from "@/services/classService";
@@ -44,10 +44,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, Save, ClipboardList, Plus, Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 
-type RowDraft = {
+type CellDraft = {
   scoreId?: number;
   nilai: string;
 };
+
+type StudentDrafts = Record<number, Record<number, CellDraft>>;
+
+const FINAL_SCORE_FILTER_VALUE = "__final__";
 
 export default function ScoreManagementPage() {
   const user = useAuthStore((s) => s.user);
@@ -63,9 +67,10 @@ export default function ScoreManagementPage() {
   const [selectedClassId, setSelectedClassId] = useState("-");
   const [selectedSubjectId, setSelectedSubjectId] = useState("-");
   const [selectedAssessmentId, setSelectedAssessmentId] = useState("-");
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
 
   const [students, setStudents] = useState<ClassStudentItem[]>([]);
-  const [drafts, setDrafts] = useState<Record<number, RowDraft>>({});
+  const [drafts, setDrafts] = useState<StudentDrafts>({});
 
   const [isLoadingRefs, setIsLoadingRefs] = useState(true);
   const [isLoadingRows, setIsLoadingRows] = useState(false);
@@ -85,14 +90,49 @@ export default function ScoreManagementPage() {
   const [assessmentTeacherId, setAssessmentTeacherId] = useState("-");
   const [isAssessmentSectionCollapsed, setIsAssessmentSectionCollapsed] = useState(true);
 
-  const canLoadRows =
-    selectedClassId !== "-" &&
-    selectedSubjectId !== "-" &&
-    selectedAssessmentId !== "-";
+  const isFinalScoreFilterSelected =
+    isMobileOrTablet && selectedAssessmentId === FINAL_SCORE_FILTER_VALUE;
+  const selectedAssessment = assessments.find((a) => a.id === Number(selectedAssessmentId)) || null;
+  const assessmentsToRender = isMobileOrTablet
+    ? selectedAssessment && !isFinalScoreFilterSelected
+      ? [selectedAssessment]
+      : []
+    : assessments;
 
-  const selectedAssessment = useMemo(
-    () => assessments.find((a) => a.id === Number(selectedAssessmentId)) || null,
-    [assessments, selectedAssessmentId]
+  const canLoadRows =
+    selectedClassId !== "-" && selectedSubjectId !== "-" && (!isMobileOrTablet || selectedAssessmentId !== "-");
+
+  const calculateFinalScore = useCallback(
+    (studentId: number) => {
+      const studentDrafts = drafts[studentId] || {};
+      const totalConfiguredBobot = assessments.reduce(
+        (sum, assessment) => sum + Number(assessment.bobot || 0),
+        0
+      );
+
+      if (totalConfiguredBobot <= 0) return null;
+
+      // Keep effective total weight at most 100% while preserving relative proportions.
+      const normalizationFactor = totalConfiguredBobot > 100 ? 100 / totalConfiguredBobot : 1;
+      let weightedSum = 0;
+      let hasAnyInput = false;
+
+      for (const assessment of assessments) {
+        const cell = studentDrafts[assessment.id];
+        if (!cell || cell.nilai === "") continue;
+
+        const nilai = Number(cell.nilai);
+        if (Number.isNaN(nilai)) continue;
+
+        const bobot = Number(assessment.bobot || 0);
+        hasAnyInput = true;
+        weightedSum += nilai * ((bobot * normalizationFactor) / 100);
+      }
+
+      if (!hasAnyInput) return null;
+      return Number(Math.min(weightedSum, 100).toFixed(2));
+    },
+    [assessments, drafts]
   );
 
   const loadReferences = useCallback(async () => {
@@ -142,29 +182,44 @@ export default function ScoreManagementPage() {
     try {
       const classId = Number(selectedClassId);
       const subjectId = Number(selectedSubjectId);
-      const assessmentId = Number(selectedAssessmentId);
 
-      const [classDetailRes, scoreRes] = await Promise.all([
-        classService.getById(classId),
-        scoreService.list({
+      const classDetailRes = await classService.getById(classId);
+
+      const allScores: ScoreItem[] = [];
+      let page = 1;
+      let totalPages = 1;
+
+      do {
+        const scoreRes = await scoreService.list({
+          page,
           limit: 100,
           subject_id: subjectId,
-          assessment_id: assessmentId,
           academic_year_id: activeAcademicYear?.id,
-        }),
-      ]);
+        });
+
+        allScores.push(...scoreRes.data);
+        totalPages = scoreRes.meta?.totalPages || 1;
+        page += 1;
+      } while (page <= totalPages);
 
       const activeStudents = classDetailRes.data.students.filter((s) => s.enrollment.is_active);
       const studentIdSet = new Set(activeStudents.map((s) => s.id));
-      const filteredScores = scoreRes.data.filter((s: ScoreItem) => studentIdSet.has(s.student.id));
+      const filteredScores = allScores.filter((s: ScoreItem) => studentIdSet.has(s.student.id));
 
-      const nextDrafts: Record<number, RowDraft> = {};
+      const nextDrafts: StudentDrafts = {};
       for (const student of activeStudents) {
-        const score = filteredScores.find((r) => r.student.id === student.id);
-        nextDrafts[student.id] = {
-          scoreId: score?.id,
-          nilai: score ? String(score.nilai) : "",
-        };
+        nextDrafts[student.id] = {};
+
+        for (const assessment of assessments) {
+          const score = filteredScores.find(
+            (r) => r.student.id === student.id && r.assessment.id === assessment.id
+          );
+
+          nextDrafts[student.id][assessment.id] = {
+            scoreId: score?.id,
+            nilai: score ? String(score.nilai) : "",
+          };
+        }
       }
 
       setStudents(activeStudents);
@@ -178,7 +233,31 @@ export default function ScoreManagementPage() {
     } finally {
       setIsLoadingRows(false);
     }
-  }, [canLoadRows, selectedAssessmentId, selectedClassId, selectedSubjectId, activeAcademicYear?.id]);
+  }, [canLoadRows, selectedClassId, selectedSubjectId, activeAcademicYear?.id, assessments]);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 1023px)");
+    const onChange = () => setIsMobileOrTablet(window.innerWidth <= 1023);
+    mql.addEventListener("change", onChange);
+    onChange();
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!assessments.length) {
+      setSelectedAssessmentId("-");
+      return;
+    }
+
+    if (selectedAssessmentId === FINAL_SCORE_FILTER_VALUE) {
+      return;
+    }
+
+    const selectedExists = assessments.some((a) => String(a.id) === selectedAssessmentId);
+    if (!selectedExists) {
+      setSelectedAssessmentId(String(assessments[0].id));
+    }
+  }, [assessments, selectedAssessmentId]);
 
   useEffect(() => {
     loadReferences();
@@ -284,9 +363,6 @@ export default function ScoreManagementPage() {
     try {
       await assessmentService.delete(selectedAssessmentDelete.id);
       toast.success("Assessment berhasil dihapus");
-      if (selectedAssessmentId === String(selectedAssessmentDelete.id)) {
-        setSelectedAssessmentId("-");
-      }
       setDeleteAssessmentOpen(false);
       setSelectedAssessmentDelete(null);
       loadReferences();
@@ -301,52 +377,68 @@ export default function ScoreManagementPage() {
     }
   }
 
-  function handleChangeNilai(studentId: number, value: string) {
+  function handleChangeNilai(studentId: number, assessmentId: number, value: string) {
+    const normalizedValue =
+      value === ""
+        ? ""
+        : String(Math.min(100, Math.max(0, Number.isNaN(Number(value)) ? 0 : Number(value))));
+
     setDrafts((prev) => ({
       ...prev,
       [studentId]: {
-        ...prev[studentId],
-        nilai: value,
+        ...(prev[studentId] || {}),
+        [assessmentId]: {
+          ...(prev[studentId]?.[assessmentId] || {}),
+          nilai: normalizedValue,
+        },
       },
     }));
   }
 
   async function saveOne(studentId: number) {
-    const draft = drafts[studentId];
-    if (!draft) return;
+    const studentDrafts = drafts[studentId];
+    if (!studentDrafts) return;
     if (!activeAcademicYear) {
       toast.error("Tahun akademik aktif tidak ditemukan");
       return;
     }
 
-    const nilai = Number(draft.nilai);
-    if (!draft.nilai || Number.isNaN(nilai) || nilai < 0 || nilai > 100) {
-      toast.error("Nilai harus angka 0-100");
-      return;
-    }
-
     setSavingStudentId(studentId);
     try {
-      if (draft.scoreId) {
-        await scoreService.update(draft.scoreId, { nilai });
-      } else {
-        const res = await scoreService.create({
-          student_id: studentId,
-          subject_id: Number(selectedSubjectId),
-          assessment_id: Number(selectedAssessmentId),
-          academic_year_id: activeAcademicYear.id,
-          nilai,
-        });
+      for (const assessment of assessments) {
+        const draft = studentDrafts[assessment.id];
+        if (!draft || draft.nilai === "") continue;
 
-        setDrafts((prev) => ({
-          ...prev,
-          [studentId]: {
-            ...prev[studentId],
-            scoreId: res.data.id,
-          },
-        }));
+        const nilai = Number(draft.nilai);
+        if (Number.isNaN(nilai) || nilai < 0 || nilai > 100) {
+          toast.error(`Nilai ${assessment.nama_penilaian} harus 0-100`);
+          return;
+        }
+
+        if (draft.scoreId) {
+          await scoreService.update(draft.scoreId, { nilai });
+        } else {
+          const res = await scoreService.create({
+            student_id: studentId,
+            subject_id: Number(selectedSubjectId),
+            assessment_id: assessment.id,
+            academic_year_id: activeAcademicYear.id,
+            nilai,
+          });
+
+          setDrafts((prev) => ({
+            ...prev,
+            [studentId]: {
+              ...prev[studentId],
+              [assessment.id]: {
+                ...prev[studentId]?.[assessment.id],
+                scoreId: res.data.id,
+              },
+            },
+          }));
+        }
       }
-      toast.success("Nilai berhasil disimpan");
+      toast.success("Nilai siswa berhasil disimpan");
     } catch (err) {
       const message =
         axios.isAxiosError(err) && err.response?.data?.message
@@ -370,47 +462,60 @@ export default function ScoreManagementPage() {
     let failCount = 0;
 
     for (const s of students) {
-      const draft = drafts[s.id];
-      if (!draft?.nilai) continue;
+      const studentDrafts = drafts[s.id];
+      if (!studentDrafts) continue;
 
-      const nilai = Number(draft.nilai);
-      if (Number.isNaN(nilai) || nilai < 0 || nilai > 100) {
-        failCount += 1;
-        continue;
-      }
+      let rowHasInput = false;
+      let rowFailed = false;
 
-      try {
-        if (draft.scoreId) {
-          await scoreService.update(draft.scoreId, { nilai });
-        } else {
-          const res = await scoreService.create({
-            student_id: s.id,
-            subject_id: Number(selectedSubjectId),
-            assessment_id: Number(selectedAssessmentId),
-            academic_year_id: activeAcademicYear.id,
-            nilai,
-          });
+      for (const assessment of assessments) {
+        const draft = studentDrafts[assessment.id];
+        if (!draft || draft.nilai === "") continue;
 
-          setDrafts((prev) => ({
-            ...prev,
-            [s.id]: {
-              ...prev[s.id],
-              scoreId: res.data.id,
-            },
-          }));
+        rowHasInput = true;
+        const nilai = Number(draft.nilai);
+
+        if (Number.isNaN(nilai) || nilai < 0 || nilai > 100) {
+          rowFailed = true;
+          break;
         }
-        successCount += 1;
-      } catch {
-        failCount += 1;
+
+        try {
+          if (draft.scoreId) {
+            await scoreService.update(draft.scoreId, { nilai });
+          } else {
+            const res = await scoreService.create({
+              student_id: s.id,
+              subject_id: Number(selectedSubjectId),
+              assessment_id: assessment.id,
+              academic_year_id: activeAcademicYear.id,
+              nilai,
+            });
+
+            setDrafts((prev) => ({
+              ...prev,
+              [s.id]: {
+                ...prev[s.id],
+                [assessment.id]: {
+                  ...prev[s.id]?.[assessment.id],
+                  scoreId: res.data.id,
+                },
+              },
+            }));
+          }
+        } catch {
+          rowFailed = true;
+          break;
+        }
       }
+
+      if (!rowHasInput) continue;
+      if (rowFailed) failCount += 1;
+      else successCount += 1;
     }
 
-    if (successCount) {
-      toast.success(`${successCount} nilai berhasil disimpan`);
-    }
-    if (failCount) {
-      toast.error(`${failCount} nilai gagal disimpan`);
-    }
+    if (successCount) toast.success(`${successCount} siswa berhasil disimpan`);
+    if (failCount) toast.error(`${failCount} siswa gagal disimpan`);
 
     setIsSavingAll(false);
   }
@@ -476,7 +581,7 @@ export default function ScoreManagementPage() {
                     <TableHead>Bobot</TableHead>
                     {isAdmin && <TableHead>Guru</TableHead>}
                     <TableHead>Status</TableHead>
-                    <TableHead className="w-32" />
+                    <TableHead className="w-16" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -519,9 +624,13 @@ export default function ScoreManagementPage() {
       <Card>
         <CardHeader>
           <CardTitle>Filter Data</CardTitle>
-          <CardDescription>Pilih kelas, mata pelajaran, dan jenis penilaian</CardDescription>
+          <CardDescription>
+            {isMobileOrTablet
+              ? "Pilih kelas, mata pelajaran, dan penilaian"
+              : "Pilih kelas dan mata pelajaran"}
+          </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <CardContent className={`grid grid-cols-1 gap-3 ${isMobileOrTablet ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Kelas</Label>
             <Select value={selectedClassId} onValueChange={setSelectedClassId}>
@@ -556,22 +665,25 @@ export default function ScoreManagementPage() {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Penilaian</Label>
-            <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Pilih penilaian" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="-">Pilih penilaian</SelectItem>
-                {assessments.map((a) => (
-                  <SelectItem key={a.id} value={String(a.id)}>
-                    {a.nama_penilaian} ({a.bobot}%) {isAdmin && a.teacher ? `- ${a.teacher.name}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {isMobileOrTablet && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Penilaian</Label>
+              <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih penilaian" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FINAL_SCORE_FILTER_VALUE}>Nilai Akhir</SelectItem>
+                  {assessments.map((a) => (
+                    <SelectItem key={a.id} value={String(a.id)}>
+                      {a.nama_penilaian} ({a.bobot}%)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
         </CardContent>
       </Card>
 
@@ -583,8 +695,12 @@ export default function ScoreManagementPage() {
               Nilai Siswa
             </CardTitle>
             <CardDescription>
-              {selectedAssessment
-                ? `Bobot penilaian: ${selectedAssessment.bobot}%`
+              {assessmentsToRender.length
+                ? isMobileOrTablet
+                  ? "Mode mobile/tablet: tampil 1 assessment sesuai filter. Nilai akhir dihitung otomatis."
+                  : "Semua assessment ditampilkan. Nilai akhir dihitung otomatis."
+                : isFinalScoreFilterSelected
+                  ? "Mode mobile/tablet: menampilkan nilai akhir dari filter penilaian."
                 : "Pilih filter untuk mulai input nilai"}
             </CardDescription>
           </div>
@@ -601,7 +717,9 @@ export default function ScoreManagementPage() {
             </div>
           ) : !canLoadRows ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
-              Pilih kelas, mata pelajaran, dan penilaian terlebih dahulu.
+              {isMobileOrTablet
+                ? "Pilih kelas, mata pelajaran, dan penilaian terlebih dahulu."
+                : "Pilih kelas dan mata pelajaran terlebih dahulu."}
             </div>
           ) : students.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
@@ -614,35 +732,56 @@ export default function ScoreManagementPage() {
                 <TableRow>
                   <TableHead className="hidden md:table-cell">NIS</TableHead>
                   <TableHead>Nama</TableHead>
-                  <TableHead className="w-40">Nilai</TableHead>
-                  <TableHead className="hidden md:table-cell">Status</TableHead>
-                  <TableHead className="hidden w-32 md:table-cell" />
+                  {assessmentsToRender.map((a) => (
+                    <TableHead key={a.id} className="w-24 min-w-24">
+                      <div>{a.nama_penilaian}</div>
+                      <div className="text-xs text-muted-foreground">{a.bobot}%</div>
+                    </TableHead>
+                  ))}
+                  {(!isMobileOrTablet || isFinalScoreFilterSelected) && (
+                    <TableHead className="w-20">Nilai Akhir</TableHead>
+                  )}
+                  <TableHead className="hidden w-16 md:table-cell" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {students.map((s) => {
-                  const draft = drafts[s.id];
-                  const isSaved = !!draft?.scoreId;
+                  const finalScore = calculateFinalScore(s.id);
+                  const finalScoreClassName =
+                    finalScore === null
+                      ? "bg-muted text-muted-foreground"
+                      : finalScore < 75
+                        ? "bg-red-100 text-red-700"
+                        : "bg-green-100 text-green-700";
                   return (
                     <TableRow key={s.id}>
                       <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">{s.nis}</TableCell>
                       <TableCell className="font-medium">{s.name}</TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step="0.01"
-                          value={draft?.nilai ?? ""}
-                          onChange={(e) => handleChangeNilai(s.id, e.target.value)}
-                          placeholder="0-100"
-                        />
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <Badge variant={isSaved ? "default" : "secondary"}>
-                          {isSaved ? "Tersimpan" : "Belum"}
-                        </Badge>
-                      </TableCell>
+
+                      {assessmentsToRender.map((a) => (
+                        <TableCell key={a.id}>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="0.01"
+                            className="h-7 w-16 px-1 text-center text-xs"
+                            value={drafts[s.id]?.[a.id]?.nilai ?? ""}
+                            onChange={(e) => handleChangeNilai(s.id, a.id, e.target.value)}
+                            placeholder="0-100"
+                          />
+                        </TableCell>
+                      ))}
+
+                      {(!isMobileOrTablet || isFinalScoreFilterSelected) && (
+                        <TableCell>
+                          <span
+                            className={`inline-flex min-w-14 items-center justify-center rounded-md px-1.5 py-1 text-xs font-semibold ${finalScoreClassName}`}
+                          >
+                            {finalScore === null ? "-" : finalScore}
+                          </span>
+                        </TableCell>
+                      )}
                       <TableCell className="hidden md:table-cell">
                         <Button
                           size="sm"

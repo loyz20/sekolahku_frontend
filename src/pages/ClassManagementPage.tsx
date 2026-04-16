@@ -305,7 +305,7 @@ export default function ClassManagementPage() {
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               className="w-full sm:w-48"
             />
-            <Button onClick={handleSearch}>
+            <Button onClick={handleSearch} className="w-full sm:w-auto">
               <Search className="mr-2 size-4" />
               Cari
             </Button>
@@ -338,18 +338,18 @@ export default function ClassManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Kode</TableHead>
+                    <TableHead className="hidden sm:table-cell">Kode</TableHead>
                     <TableHead>Nama Kelas</TableHead>
                     <TableHead>Tingkat</TableHead>
-                    <TableHead>Wali Kelas</TableHead>
-                    <TableHead>Dibuat</TableHead>
+                    <TableHead className="hidden md:table-cell">Wali Kelas</TableHead>
+                    <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
                     <TableHead className="w-12" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {classes.map((cls) => (
                     <TableRow key={cls.id}>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="hidden font-mono text-sm sm:table-cell">
                         {cls.code}
                       </TableCell>
                       <TableCell className="font-medium">
@@ -369,7 +369,7 @@ export default function ClassManagementPage() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         {cls.homeroom_teacher ? (
                           <div>
                             <p className="text-sm font-medium">
@@ -385,7 +385,7 @@ export default function ClassManagementPage() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                         {cls.created_at}
                       </TableCell>
                       <TableCell>

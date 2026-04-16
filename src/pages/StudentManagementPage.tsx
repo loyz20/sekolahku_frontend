@@ -504,18 +504,18 @@ export default function StudentManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>NIS</TableHead>
+                    <TableHead className="hidden sm:table-cell">NIS</TableHead>
                     <TableHead>Nama</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Dibuat</TableHead>
+                    <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
                     <TableHead className="w-12" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {students.map((student) => (
                     <TableRow key={student.id}>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                         {student.nis}
                       </TableCell>
                       <TableCell>
@@ -523,13 +523,13 @@ export default function StudentManagementPage() {
                           {student.name}
                         </Link>
                       </TableCell>
-                      <TableCell>{student.email ?? "-"}</TableCell>
+                      <TableCell className="hidden md:table-cell">{student.email ?? "-"}</TableCell>
                       <TableCell>
                         <Badge variant={student.is_active ? "default" : "secondary"}>
                           {student.is_active ? "Aktif" : "Nonaktif"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                         {student.created_at}
                       </TableCell>
                       <TableCell>

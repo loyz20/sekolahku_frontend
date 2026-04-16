@@ -417,10 +417,10 @@ export default function TeacherDetailPage() {
                 <TableRow>
                   <TableHead>Kelas</TableHead>
                   <TableHead>Mata Pelajaran</TableHead>
-                  <TableHead>Tahun Ajaran</TableHead>
+                  <TableHead className="hidden md:table-cell">Tahun Ajaran</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Tanggal Penugasan</TableHead>
-                  <TableHead>Catatan</TableHead>
+                  <TableHead className="hidden md:table-cell">Tanggal Penugasan</TableHead>
+                  <TableHead className="hidden lg:table-cell">Catatan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -431,7 +431,7 @@ export default function TeacherDetailPage() {
                       <span className="ml-2 text-muted-foreground">{assignment.class.name}</span>
                     </TableCell>
                     <TableCell>{assignment.subject.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <Badge variant="outline">{assignment.academic_year.name}</Badge>
                     </TableCell>
                     <TableCell>
@@ -439,10 +439,10 @@ export default function TeacherDetailPage() {
                         {assignment.is_active ? "Aktif" : "Tidak Aktif"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
                       {new Date(assignment.assigned_at).toLocaleDateString("id-ID")}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="hidden text-muted-foreground lg:table-cell">
                       {assignment.notes ?? "-"}
                     </TableCell>
                   </TableRow>
@@ -476,7 +476,7 @@ export default function TeacherDetailPage() {
                 <TableRow>
                   <TableHead>Kelas</TableHead>
                   <TableHead>Tahun Akademik</TableHead>
-                  <TableHead>Ditetapkan</TableHead>
+                  <TableHead className="hidden md:table-cell">Ditetapkan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -493,7 +493,7 @@ export default function TeacherDetailPage() {
                         {hr.academic_year_name}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
                       {hr.assigned_at}
                     </TableCell>
                   </TableRow>
@@ -527,7 +527,7 @@ export default function TeacherDetailPage() {
                 <TableRow>
                   <TableHead>Kode</TableHead>
                   <TableHead>Nama Tugas</TableHead>
-                  <TableHead>Ditetapkan</TableHead>
+                  <TableHead className="hidden md:table-cell">Ditetapkan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -537,7 +537,7 @@ export default function TeacherDetailPage() {
                       <Badge variant="secondary">{duty.code}</Badge>
                     </TableCell>
                     <TableCell>{duty.duty_name}</TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
                       {duty.assigned_at}
                     </TableCell>
                   </TableRow>

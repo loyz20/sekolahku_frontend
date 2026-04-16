@@ -428,7 +428,7 @@ export default function DutyManagementPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>NIP</TableHead>
+                  <TableHead className="hidden sm:table-cell">NIP</TableHead>
                   <TableHead>Nama</TableHead>
                   <TableHead>Tugas</TableHead>
                   <TableHead className="w-24" />
@@ -437,7 +437,7 @@ export default function DutyManagementPage() {
               <TableBody>
                 {searchResults.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                       {user.nip ?? "-"}
                     </TableCell>
                     <TableCell>

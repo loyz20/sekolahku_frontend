@@ -415,7 +415,7 @@ export default function TeacherManagementPage() {
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
               </div>
-              <Button onClick={handleSearch}>
+              <Button onClick={handleSearch} className="w-full sm:w-auto">
                 <Search className="mr-2 size-4" />
                 Cari
               </Button>
@@ -467,19 +467,19 @@ export default function TeacherManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>NIP</TableHead>
+                    <TableHead className="hidden sm:table-cell">NIP</TableHead>
                     <TableHead>Nama</TableHead>
-                    <TableHead>Keahlian</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead className="hidden md:table-cell">Keahlian</TableHead>
+                    <TableHead className="hidden lg:table-cell">Email</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Dibuat</TableHead>
+                    <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
                     <TableHead className="w-12" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {teachers.map((teacher) => (
                     <TableRow key={teacher.id}>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                         {teacher.nip}
                       </TableCell>
                       <TableCell>
@@ -490,10 +490,10 @@ export default function TeacherManagementPage() {
                           {teacher.name}
                         </Link>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
                         {teacher.specialization ?? "-"}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                         {teacher.email ?? "-"}
                       </TableCell>
                       <TableCell>
@@ -501,7 +501,7 @@ export default function TeacherManagementPage() {
                           {teacher.is_active ? "Aktif" : "Nonaktif"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                         {teacher.created_at}
                       </TableCell>
                       <TableCell>

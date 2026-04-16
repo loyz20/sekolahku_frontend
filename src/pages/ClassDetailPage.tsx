@@ -409,23 +409,23 @@ export default function ClassDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Kode Mapel</TableHead>
+                  <TableHead className="hidden sm:table-cell">Kode Mapel</TableHead>
                   <TableHead>Nama Mapel</TableHead>
-                  <TableHead>Tahun Akademik</TableHead>
+                  <TableHead className="hidden md:table-cell">Tahun Akademik</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Tanggal Penugasan</TableHead>
+                  <TableHead className="hidden lg:table-cell">Tanggal Penugasan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {classSubjects.map((mapping) => (
                   <TableRow key={mapping.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                       {mapping.subject.code}
                     </TableCell>
                     <TableCell className="font-medium">
                       {mapping.subject.name}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <Badge variant="secondary">
                         {mapping.academic_year.name}
                       </Badge>
@@ -437,7 +437,7 @@ export default function ClassDetailPage() {
                         {mapping.is_active ? "Aktif" : "Tidak Aktif"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                       {new Date(mapping.assigned_at).toLocaleDateString("id-ID")}
                     </TableCell>
                   </TableRow>
@@ -464,17 +464,17 @@ export default function ClassDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>NIP</TableHead>
+                  <TableHead className="hidden sm:table-cell">NIP</TableHead>
                   <TableHead>Nama Guru</TableHead>
                   <TableHead>Tahun Ajaran</TableHead>
-                  <TableHead>Ditugaskan</TableHead>
-                  <TableHead>Catatan</TableHead>
+                  <TableHead className="hidden md:table-cell">Ditugaskan</TableHead>
+                  <TableHead className="hidden lg:table-cell">Catatan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {activeHomerooms.map((h) => (
                   <TableRow key={h.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                       {h.teacher.nip ?? "-"}
                     </TableCell>
                     <TableCell className="font-medium">
@@ -485,10 +485,10 @@ export default function ClassDetailPage() {
                         {h.academic_year.name}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
                       {h.assigned_at}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                       {h.notes ?? "-"}
                     </TableCell>
                   </TableRow>
@@ -520,18 +520,18 @@ export default function ClassDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>NIP</TableHead>
+                  <TableHead className="hidden sm:table-cell">NIP</TableHead>
                   <TableHead>Nama Guru</TableHead>
                   <TableHead>Tahun Ajaran</TableHead>
-                  <TableHead>Ditugaskan</TableHead>
-                  <TableHead>Berakhir</TableHead>
+                  <TableHead className="hidden md:table-cell">Ditugaskan</TableHead>
+                  <TableHead className="hidden lg:table-cell">Berakhir</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {classData.homeroom_assignments.map((h) => (
                   <TableRow key={h.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                       {h.teacher.nip ?? "-"}
                     </TableCell>
                     <TableCell className="font-medium">
@@ -540,10 +540,10 @@ export default function ClassDetailPage() {
                     <TableCell className="text-sm">
                       {h.academic_year.name}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
                       {h.assigned_at}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                       {h.ended_at ?? "-"}
                     </TableCell>
                     <TableCell>
@@ -582,11 +582,11 @@ export default function ClassDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>NIS</TableHead>
+                  <TableHead className="hidden sm:table-cell">NIS</TableHead>
                   <TableHead>Nama</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Tahun Ajaran</TableHead>
+                  <TableHead className="hidden md:table-cell">Gender</TableHead>
+                  <TableHead className="hidden lg:table-cell">Email</TableHead>
+                  <TableHead className="hidden md:table-cell">Tahun Ajaran</TableHead>
                   <TableHead>Status Enroll</TableHead>
                   <TableHead>Status Siswa</TableHead>
                 </TableRow>
@@ -594,13 +594,13 @@ export default function ClassDetailPage() {
               <TableBody>
                 {classData.students.map((s) => (
                   <TableRow key={s.enrollment.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                       {s.nis}
                     </TableCell>
                     <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell>{s.gender === "M" ? "L" : s.gender === "F" ? "P" : "-"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{s.email ?? "-"}</TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">{s.gender === "M" ? "L" : s.gender === "F" ? "P" : "-"}</TableCell>
+                    <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">{s.email ?? "-"}</TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <Badge variant="secondary">{s.enrollment.academic_year.name}</Badge>
                     </TableCell>
                     <TableCell>

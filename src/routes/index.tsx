@@ -21,6 +21,7 @@ import SubjectDetailPage from "@/pages/SubjectDetailPage";
 import ScheduleManagementPage from "@/pages/ScheduleManagementPage";
 import ClassSubjectManagementPage from "@/pages/ClassSubjectManagementPage";
 import ScoreManagementPage from "@/pages/ScoreManagementPage";
+import AttendanceMeetingPage from "@/pages/AttendanceMeetingPage";
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +48,7 @@ export const router = createBrowserRouter([
           { path: "/mapel", element: <SubjectManagementPage /> },
           { path: "/mapel/:id", element: <SubjectDetailPage /> },
           { path: "/nilai", element: <ScoreManagementPage /> },
+          { path: "/absensi", element: <AttendanceMeetingPage /> },
           { path: "/kelas", element: <ClassManagementPage /> },
           { path: "/kelas/:id", element: <ClassDetailPage /> },
           { path: "/jadwal", element: <ScheduleManagementPage /> },

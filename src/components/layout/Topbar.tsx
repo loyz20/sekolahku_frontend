@@ -78,6 +78,10 @@ export function Topbar() {
               <Sparkles className="h-3 w-3" />
               <span className="truncate">{schoolName}</span>
             </div>
+            <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-sky-700 md:hidden">
+              <CalendarDays className="h-3 w-3" />
+              <span className="truncate">{selectedAcademicYearName}</span>
+            </div>
           </div>
         </div>
 
