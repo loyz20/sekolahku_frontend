@@ -20,8 +20,12 @@ import SubjectManagementPage from "@/pages/SubjectManagementPage";
 import SubjectDetailPage from "@/pages/SubjectDetailPage";
 import ScheduleManagementPage from "@/pages/ScheduleManagementPage";
 import ClassSubjectManagementPage from "@/pages/ClassSubjectManagementPage";
+import TeachingAssignmentPage from "@/pages/TeachingAssignmentPage";
 import ScoreManagementPage from "@/pages/ScoreManagementPage";
 import AttendanceMeetingPage from "@/pages/AttendanceMeetingPage";
+import AttendanceReportPage from "@/pages/AttendanceReportPage";
+import ViolationManagementPage from "@/pages/ViolationManagementPage";
+import ViolationTypeManagementPage from "@/pages/ViolationTypeManagementPage";
 
 export const router = createBrowserRouter([
   {
@@ -49,10 +53,14 @@ export const router = createBrowserRouter([
           { path: "/mapel/:id", element: <SubjectDetailPage /> },
           { path: "/nilai", element: <ScoreManagementPage /> },
           { path: "/absensi", element: <AttendanceMeetingPage /> },
+          { path: "/absensi/laporan", element: <AttendanceReportPage /> },
+          { path: "/pelanggaran", element: <ViolationManagementPage /> },
+          { path: "/pelanggaran/master", element: <ViolationTypeManagementPage /> },
           { path: "/kelas", element: <ClassManagementPage /> },
           { path: "/kelas/:id", element: <ClassDetailPage /> },
           { path: "/jadwal", element: <ScheduleManagementPage /> },
           { path: "/jadwal/class-subjects", element: <ClassSubjectManagementPage /> },
+          { path: "/jadwal/teaching-assignments", element: <TeachingAssignmentPage /> },
           { path: "/profil", element: <ProfilePage /> },
           { path: "/pengaturan", element: <SettingsPage /> },
           { path: "/health", element: <HealthStatusPage /> },

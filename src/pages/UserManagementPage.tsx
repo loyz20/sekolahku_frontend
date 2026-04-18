@@ -60,8 +60,6 @@ import {
   Trash2,
   Users,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   User,
   Mail,
   Lock,
@@ -70,6 +68,7 @@ import {
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { PaginationControls } from "@/components/features/PaginationControls";
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState<UserListItem[]>([]);
@@ -78,7 +77,7 @@ export default function UserManagementPage() {
   const [search, setSearch] = useState("");
   const [dutyFilter, setDutyFilter] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   // Edit user dialog
   const [editOpen, setEditOpen] = useState(false);
@@ -115,7 +114,7 @@ export default function UserManagementPage() {
     try {
       const res = await userService.listUsers({
         page,
-        limit,
+        limit: pageSize,
         search: search || undefined,
         duty: dutyFilter || undefined,
       });
@@ -130,7 +129,7 @@ export default function UserManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, search, dutyFilter]);
+  }, [page, pageSize, search, dutyFilter]);
 
   useEffect(() => {
     loadUsers();
@@ -139,6 +138,11 @@ export default function UserManagementPage() {
   function handleSearch() {
     setPage(1);
     loadUsers();
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPage(1);
+    setPageSize(nextPageSize);
   }
 
   // Edit user
@@ -456,32 +460,16 @@ export default function UserManagementPage() {
               </Table>
 
               {/* Pagination */}
-              {meta && meta.totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Halaman {meta.page} dari {meta.totalPages}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => p - 1)}
-                    >
-                      <ChevronLeft className="mr-1 size-4" />
-                      Sebelumnya
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page >= meta.totalPages}
-                      onClick={() => setPage((p) => p + 1)}
-                    >
-                      Selanjutnya
-                      <ChevronRight className="ml-1 size-4" />
-                    </Button>
-                  </div>
-                </div>
+              {meta && (
+                <PaginationControls
+                  currentPage={meta.page}
+                  totalPages={meta.totalPages}
+                  totalItems={meta.total}
+                  pageSize={pageSize}
+                  itemLabel="pengguna"
+                  onPageChange={setPage}
+                  onPageSizeChange={handlePageSizeChange}
+                />
               )}
             </>
           )}

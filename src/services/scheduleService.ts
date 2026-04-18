@@ -67,6 +67,15 @@ export const scheduleService = {
     return response.data;
   },
 
+  deleteClassSubject: async (classSubjectId: number) => {
+    const response = await api.delete<{
+      success: boolean;
+      message: string;
+      data: { classSubjectId: number };
+    }>(`${ENDPOINT}/class-subjects/${classSubjectId}`);
+    return response.data;
+  },
+
   // Teaching Assignment Management
   listTeachingAssignments: async (params?: TeachingAssignmentListParams) => {
     const response = await api.get<{

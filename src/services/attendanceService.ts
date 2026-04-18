@@ -1,59 +1,58 @@
 import api from "@/api";
 import type {
   ApiResponse,
-  AttendanceMeetingDetail,
-  AttendanceMeetingListItem,
-  AttendanceMeetingListParams,
-  CreateAttendanceMeetingRequest,
+  AttendanceItem,
+  AttendanceListParams,
+  AttendanceSummary,
+  BulkUpsertAttendanceRequest,
+  CreateAttendanceRequest,
   PaginatedResponse,
-  UpdateAttendanceMeetingRequest,
-  UpsertMeetingAttendanceRequest,
+  UpdateAttendanceRequest,
 } from "@/types";
 
-const ENDPOINT = "/v1/attendances";
-
 export const attendanceService = {
-  async listMeetings(params?: AttendanceMeetingListParams) {
-    const res = await api.get<PaginatedResponse<AttendanceMeetingListItem>>(
-      `${ENDPOINT}/meetings`,
-      { params }
-    );
+  async list(params?: AttendanceListParams) {
+    const res = await api.get<PaginatedResponse<AttendanceItem>>("/v1/attendances", {
+      params,
+    });
     return res.data;
   },
 
-  async getMeetingById(id: number) {
-    const res = await api.get<ApiResponse<AttendanceMeetingDetail>>(
-      `${ENDPOINT}/meetings/${id}`
-    );
+  async getById(id: number) {
+    const res = await api.get<ApiResponse<AttendanceItem>>(`/v1/attendances/${id}`);
     return res.data;
   },
 
-  async createMeeting(data: CreateAttendanceMeetingRequest) {
-    const res = await api.post<ApiResponse<AttendanceMeetingDetail>>(
-      `${ENDPOINT}/meetings`,
-      data
-    );
+  async create(data: CreateAttendanceRequest) {
+    const res = await api.post<ApiResponse<AttendanceItem>>("/v1/attendances", data);
     return res.data;
   },
 
-  async updateMeeting(id: number, data: UpdateAttendanceMeetingRequest) {
-    const res = await api.patch<ApiResponse<AttendanceMeetingDetail>>(
-      `${ENDPOINT}/meetings/${id}`,
-      data
-    );
+  async bulkUpsert(data: BulkUpsertAttendanceRequest) {
+    const res = await api.post<
+      ApiResponse<{
+        upserted: number;
+        subject_id: number;
+        date: string;
+      }>
+    >("/v1/attendances/bulk-upsert", data);
     return res.data;
   },
 
-  async upsertMeetingAttendance(id: number, data: UpsertMeetingAttendanceRequest) {
-    const res = await api.put<ApiResponse<AttendanceMeetingDetail>>(
-      `${ENDPOINT}/meetings/${id}/attendance`,
-      data
-    );
+  async update(id: number, data: UpdateAttendanceRequest) {
+    const res = await api.patch<ApiResponse<AttendanceItem>>(`/v1/attendances/${id}`, data);
     return res.data;
   },
 
-  async deleteMeeting(id: number) {
-    const res = await api.delete<ApiResponse<null>>(`${ENDPOINT}/meetings/${id}`);
+  async delete(id: number) {
+    const res = await api.delete<ApiResponse<null>>(`/v1/attendances/${id}`);
+    return res.data;
+  },
+
+  async summary(params?: Omit<AttendanceListParams, "page" | "limit" | "status">) {
+    const res = await api.get<ApiResponse<AttendanceSummary>>("/v1/attendances/summary", {
+      params,
+    });
     return res.data;
   },
 };

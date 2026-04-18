@@ -62,7 +62,7 @@ export function AppSidebar() {
             <SidebarMenuButton
               size="lg"
               asChild
-              className="h-14 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/30 px-3 shadow-sm"
+              className="h-15 rounded-2xl border border-sidebar-border/70 bg-[linear-gradient(145deg,rgba(255,255,255,0.9),rgba(240,249,255,0.85))] px-3 shadow-[0_12px_28px_-20px_rgba(2,132,199,0.45)]"
             >
               <Link to="/">
                 {logoUrl ? (
@@ -78,7 +78,7 @@ export function AppSidebar() {
                   </div>
                 )}
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold tracking-tight">{schoolName}</span>
+                  <span className="truncate font-semibold tracking-tight text-slate-900">{schoolName}</span>
                   <span className="truncate text-xs text-muted-foreground/90">
                     {schoolLevel}
                   </span>
@@ -105,7 +105,7 @@ export function AppSidebar() {
                         asChild
                         isActive={isActive}
                         tooltip={item.title}
-                        className="h-9 rounded-lg px-2.5 text-sidebar-foreground/90 transition-all hover:bg-sidebar-accent/70 hover:translate-x-0.5 data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-sm"
+                        className="h-9 rounded-xl px-2.5 text-sidebar-foreground/90 transition-all hover:bg-sidebar-accent/85 hover:translate-x-0.5 data-[active=true]:bg-[linear-gradient(140deg,rgba(14,165,233,0.95),rgba(34,197,94,0.85))] data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-[0_10px_22px_-14px_rgba(2,132,199,0.65)]"
                       >
                         <Link to={item.url}>
                           <item.icon />
@@ -132,7 +132,7 @@ export function AppSidebar() {
             <SidebarMenuButton
               size="lg"
               asChild
-              className="h-14 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/25 px-3"
+              className="h-14 rounded-2xl border border-sidebar-border/70 bg-white/80 px-3"
             >
               <Link to="/profil">
                 <Avatar size="sm" className="ring-1 ring-sidebar-border/70">

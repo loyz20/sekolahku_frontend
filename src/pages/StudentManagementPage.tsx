@@ -64,6 +64,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { PaginationControls } from "@/components/features/PaginationControls";
 import {
   GraduationCap,
   Loader2,
@@ -76,8 +77,6 @@ import {
   Pencil,
   Power,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Hash,
   MapPin,
   Calendar,
@@ -96,6 +95,7 @@ export default function StudentManagementPage() {
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
 
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("all");
   const [academicYearFilter, setAcademicYearFilter] = useState("all");
@@ -106,8 +106,6 @@ export default function StudentManagementPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [importClassId, setImportClassId] = useState("all");
-  const [importAcademicYearId, setImportAcademicYearId] = useState("all");
 
   const [createNis, setCreateNis] = useState("");
   const [createName, setCreateName] = useState("");
@@ -156,7 +154,7 @@ export default function StudentManagementPage() {
     try {
       const res = await studentService.list({
         page,
-        limit: 10,
+        limit: pageSize,
         search: search || undefined,
         class_id: classFilter === "all" ? undefined : Number(classFilter),
         academic_year_id:
@@ -173,7 +171,7 @@ export default function StudentManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, search, classFilter, academicYearFilter]);
+  }, [page, pageSize, search, classFilter, academicYearFilter]);
 
   useEffect(() => {
     loadReferenceData();
@@ -192,6 +190,11 @@ export default function StudentManagementPage() {
     setCreateAddress("");
     setCreateParentPhone("");
     setCreateEmail("");
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPage(1);
+    setPageSize(nextPageSize);
   }
 
   async function handleCreateStudent(e: React.FormEvent) {
@@ -364,9 +367,7 @@ export default function StudentManagementPage() {
 
     setIsImporting(true);
     try {
-      const classId = importClassId === "all" ? undefined : Number(importClassId);
-      const academicYearId = importAcademicYearId === "all" ? undefined : Number(importAcademicYearId);
-      const res = await studentService.import(importFile, classId, academicYearId);
+      const res = await studentService.import(importFile);
       const data = res.data;
       let msg = `Import selesai. Berhasil: ${data.created}`;
       if (data.enrolled) msg += `, Terdaftar kelas: ${data.enrolled}`;
@@ -376,8 +377,6 @@ export default function StudentManagementPage() {
       }
       setImportOpen(false);
       setImportFile(null);
-      setImportClassId("all");
-      setImportAcademicYearId("all");
       loadStudents();
     } catch (err) {
       const message =
@@ -506,7 +505,7 @@ export default function StudentManagementPage() {
                   <TableRow>
                     <TableHead className="hidden sm:table-cell">NIS</TableHead>
                     <TableHead>Nama</TableHead>
-                    <TableHead className="hidden md:table-cell">Email</TableHead>
+                    <TableHead className="hidden md:table-cell">Kelas</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
                     <TableHead className="w-12" />
@@ -523,7 +522,16 @@ export default function StudentManagementPage() {
                           {student.name}
                         </Link>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{student.email ?? "-"}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {student.active_class ? (
+                          <div>
+                            <p className="text-sm font-medium">{student.active_class.code}</p>
+                            <p className="text-xs text-muted-foreground">{student.active_class.name}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Belum ada kelas</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={student.is_active ? "default" : "secondary"}>
                           {student.is_active ? "Aktif" : "Nonaktif"}
@@ -570,34 +578,16 @@ export default function StudentManagementPage() {
                 </TableBody>
               </Table>
 
-              {meta && meta.totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Halaman {meta.page} dari {meta.totalPages}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                      disabled={meta.page <= 1}
-                    >
-                      <ChevronLeft className="size-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setPage((prev) =>
-                          Math.min(meta.totalPages, prev + 1)
-                        )
-                      }
-                      disabled={meta.page >= meta.totalPages}
-                    >
-                      <ChevronRight className="size-4" />
-                    </Button>
-                  </div>
-                </div>
+              {meta && (
+                <PaginationControls
+                  currentPage={meta.page}
+                  totalPages={meta.totalPages}
+                  totalItems={meta.total}
+                  pageSize={pageSize}
+                  itemLabel="siswa"
+                  onPageChange={setPage}
+                  onPageSizeChange={handlePageSizeChange}
+                />
               )}
             </>
           )}
@@ -777,8 +767,6 @@ export default function StudentManagementPage() {
         setImportOpen(open);
         if (!open) {
           setImportFile(null);
-          setImportClassId("all");
-          setImportAcademicYearId("all");
         }
       }}>
         <DialogContent className="max-w-lg">
@@ -820,39 +808,10 @@ export default function StudentManagementPage() {
               <p className="text-xs text-muted-foreground">File Excel (.xls, .xlsx). Baris pertama dianggap header.</p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Kelas (Opsional)</Label>
-                <Select value={importClassId} onValueChange={setImportClassId}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih kelas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tanpa kelas</SelectItem>
-                    {classes.map((cls) => (
-                      <SelectItem key={cls.id} value={String(cls.id)}>
-                        {cls.code} - {cls.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Tahun Ajaran (Opsional)</Label>
-                <Select value={importAcademicYearId} onValueChange={setImportAcademicYearId}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih tahun ajaran" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tanpa tahun ajaran</SelectItem>
-                    {academicYears.map((year) => (
-                      <SelectItem key={year.id} value={String(year.id)}>
-                        {year.code} - {year.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+              Penetapan kelas saat import sekarang mengikuti kolom <span className="font-semibold text-foreground">Kelas</span>
+              di template. Gunakan format <span className="font-semibold text-foreground">KODE - NAMA</span> sesuai sheet
+              <span className="font-semibold text-foreground"> Pilihan Kelas</span> pada file template.
             </div>
 
             <Separator className="my-2" />

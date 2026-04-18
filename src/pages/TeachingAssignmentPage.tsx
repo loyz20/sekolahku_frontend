@@ -63,11 +63,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useNotification } from "@/hooks/use-notification";
 import { useAuthStore } from "@/stores/authStore";
+import { isAdminLike } from "@/lib/roles";
 
 export default function TeachingAssignmentPage() {
   const { notify } = useNotification();
   const user = useAuthStore((s) => s.user);
-  const isSuperadmin = Boolean(user?.duties?.includes("superadmin"));
+  const canDeletePermanently = isAdminLike(user?.duties);
   const [page, setPage] = useState(1);
   const limit = 10;
 
@@ -208,14 +209,14 @@ export default function TeachingAssignmentPage() {
 
     try {
       await scheduleService.revokeTeachingAssignment(selectedAssignment.id);
-      notify("success", "Penugasan guru berhasil dihapus");
+      notify("success", "Penugasan guru berhasil dicabut");
       setShowDeleteDialog(false);
       setSelectedAssignment(null);
       refetch();
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } }).response?.data
-          ?.message || "Gagal menghapus penugasan guru";
+          ?.message || "Gagal mencabut penugasan guru";
       notify("error", message);
     }
   };
@@ -689,7 +690,7 @@ export default function TeachingAssignmentPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="h-5 w-5" />
-              {isSuperadmin ? "Kelola Penghapusan Penugasan Guru" : "Hapus Penugasan Guru"}
+              {canDeletePermanently ? "Kelola Penghapusan Penugasan Guru" : "Hapus Penugasan Guru"}
             </DialogTitle>
           </DialogHeader>
 
@@ -697,9 +698,9 @@ export default function TeachingAssignmentPage() {
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                {isSuperadmin
+                {canDeletePermanently
                   ? "Anda bisa memilih menonaktifkan (revoke) atau menghapus permanen penugasan ini."
-                  : "Apakah Anda yakin ingin menonaktifkan penugasan guru ini?"}
+                  : "Apakah Anda yakin ingin mencabut penugasan guru ini?"}
               </AlertDescription>
             </Alert>
 
@@ -741,10 +742,10 @@ export default function TeachingAssignmentPage() {
             >
               Batal
             </Button>
-            {isSuperadmin ? (
+            {canDeletePermanently ? (
               <>
                 <Button variant="secondary" onClick={handleRevoke}>
-                  Revoke
+                  Cabut
                 </Button>
                 <Button variant="destructive" onClick={handlePermanentDelete}>
                   Hapus Permanen
@@ -752,7 +753,7 @@ export default function TeachingAssignmentPage() {
               </>
             ) : (
               <Button variant="destructive" onClick={handleRevoke}>
-                Revoke
+                Cabut
               </Button>
             )}
           </DialogFooter>

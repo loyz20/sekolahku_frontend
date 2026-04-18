@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ClipboardList,
   ClipboardCheck,
+  AlertTriangle,
   Settings,
   Shield,
   Activity,
@@ -74,6 +75,12 @@ export const sidebarNav: NavGroup[] = [
         icon: CalendarDays,
         roles: ["admin", "kepala_sekolah", "superadmin"],
       },
+      {
+        title: "Master Pelanggaran",
+        url: "/pelanggaran/master",
+        icon: AlertTriangle,
+        roles: ["admin"],
+      },
     ],
   },
   {
@@ -91,6 +98,12 @@ export const sidebarNav: NavGroup[] = [
         icon: ClipboardCheck,
         roles: ["admin", "guru", "kepala_sekolah", "superadmin"],
       },
+      {
+        title: "Pelanggaran",
+        url: "/pelanggaran",
+        icon: AlertTriangle,
+        roles: ["admin", "guru", "superadmin"],
+      },
     ],
   },
   {
@@ -106,7 +119,7 @@ export const sidebarNav: NavGroup[] = [
         title: "Manajemen Tugas",
         url: "/tugas",
         icon: Shield,
-        roles: ["admin", "kepala_sekolah"],
+        roles: ["admin", "kepala_sekolah", "superadmin"],
       },
     ],
   },

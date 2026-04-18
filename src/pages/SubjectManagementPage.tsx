@@ -53,6 +53,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { PaginationControls } from "@/components/features/PaginationControls";
 import {
   BookOpen,
   Loader2,
@@ -63,8 +64,6 @@ import {
   Pencil,
   Power,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Hash,
   FileText,
 } from "lucide-react";
@@ -75,6 +74,7 @@ export default function SubjectManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -104,7 +104,7 @@ export default function SubjectManagementPage() {
     try {
       const res = await subjectService.list({
         page,
-        limit: 10,
+        limit: pageSize,
         search: search || undefined,
       });
       setSubjects(res.data);
@@ -118,7 +118,7 @@ export default function SubjectManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, search]);
+  }, [page, pageSize, search]);
 
   useEffect(() => {
     loadSubjects();
@@ -126,6 +126,11 @@ export default function SubjectManagementPage() {
 
   function handleSearch() {
     setPage(1);
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPage(1);
+    setPageSize(nextPageSize);
   }
 
   function resetCreateForm() {
@@ -381,30 +386,16 @@ export default function SubjectManagementPage() {
                 </TableBody>
               </Table>
 
-              {meta && meta.totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    Halaman {meta.page} dari {meta.totalPages}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(Math.max(1, page - 1))}
-                      disabled={page <= 1}
-                    >
-                      <ChevronLeft className="size-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(page + 1)}
-                      disabled={meta.page >= meta.totalPages}
-                    >
-                      <ChevronRight className="size-4" />
-                    </Button>
-                  </div>
-                </div>
+              {meta && (
+                <PaginationControls
+                  currentPage={meta.page}
+                  totalPages={meta.totalPages}
+                  totalItems={meta.total}
+                  pageSize={pageSize}
+                  itemLabel="mata pelajaran"
+                  onPageChange={setPage}
+                  onPageSizeChange={handlePageSizeChange}
+                />
               )}
             </>
           )}

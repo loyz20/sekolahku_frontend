@@ -66,11 +66,9 @@ export const studentService = {
     return res.data;
   },
 
-  async import(file: File, classId?: number, academicYearId?: number) {
+  async import(file: File) {
     const fd = new FormData();
     fd.append('file', file);
-    if (classId) fd.append('class_id', String(classId));
-    if (academicYearId) fd.append('academic_year_id', String(academicYearId));
     const res = await api.post<ApiResponse<any>>('/v1/students/import', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

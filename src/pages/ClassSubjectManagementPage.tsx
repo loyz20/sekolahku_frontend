@@ -42,6 +42,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { PaginationControls } from "@/components/features/PaginationControls";
 import {
   Table,
   TableBody,
@@ -50,14 +51,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNotification } from "@/hooks/use-notification";
@@ -67,7 +60,7 @@ export default function ClassSubjectManagementPage() {
   const [searchParams] = useSearchParams();
   const lockedClassId = searchParams.get("class_id") || "";
   const [page, setPage] = useState(1);
-  const limit = 100;
+  const [pageSize, setPageSize] = useState(10);
 
   // Dialogs
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -115,7 +108,7 @@ export default function ClassSubjectManagementPage() {
       "classSubjects",
       {
         page,
-        limit,
+          limit: pageSize,
         filterClassId,
         filterSubjectId,
         filterAcademicYearId,
@@ -125,7 +118,7 @@ export default function ClassSubjectManagementPage() {
     queryFn: () =>
       scheduleService.listClassSubjects({
         page,
-        limit,
+        limit: pageSize,
         class_id: (lockedClassId || filterClassId)
           ? parseInt(lockedClassId || filterClassId)
           : undefined,
@@ -260,7 +253,12 @@ export default function ClassSubjectManagementPage() {
     }
   };
 
-  const totalPages = Math.ceil((mappingsData?.meta?.total || 0) / limit);
+  const totalPages = Math.max(1, Math.ceil((mappingsData?.meta?.total || 0) / pageSize));
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPage(1);
+    setPageSize(nextPageSize);
+  }
   const activeAcademicYearId = useMemo(
     () =>
       academicYearsData?.data
@@ -500,43 +498,15 @@ export default function ClassSubjectManagementPage() {
                 </Table>
               </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-6">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => setPage(Math.max(1, page - 1))}
-                          className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                        (p) => (
-                          <PaginationItem key={p}>
-                            <PaginationLink
-                              onClick={() => setPage(p)}
-                              isActive={page === p}
-                            >
-                              {p}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                      )}
-
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() =>
-                            setPage(Math.min(totalPages, page + 1))
-                          }
-                          className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
+              <PaginationControls
+                currentPage={mappingsData?.meta?.page || page}
+                totalPages={totalPages}
+                totalItems={mappingsData?.meta?.total || 0}
+                pageSize={pageSize}
+                itemLabel="mapel kelas"
+                onPageChange={setPage}
+                onPageSizeChange={handlePageSizeChange}
+              />
             </>
           )}
         </CardContent>

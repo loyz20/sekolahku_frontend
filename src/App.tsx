@@ -3,6 +3,7 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "@/routes";
 import { useAuthStore } from "@/stores/authStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { Toaster } from "@/components/ui/sonner";
 
 function App() {
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -13,7 +14,12 @@ function App() {
     hydrateSettings();
   }, [hydrate, hydrateSettings]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster position="top-right" richColors closeButton />
+    </>
+  );
 }
 
 export default App;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { classService } from "@/services/classService";
@@ -7,7 +7,9 @@ import { assessmentService } from "@/services/assessmentService";
 import { scoreService } from "@/services/scoreService";
 import { teacherService } from "@/services/teacherService";
 import { academicYearService } from "@/services/academicYearService";
+import { scheduleService } from "@/services/scheduleService";
 import { useAuthStore } from "@/stores/authStore";
+import { isAdminLike, isTeacherOnly } from "@/lib/roles";
 import type {
   AcademicYear,
   AssessmentItem,
@@ -55,13 +57,15 @@ const FINAL_SCORE_FILTER_VALUE = "__final__";
 
 export default function ScoreManagementPage() {
   const user = useAuthStore((s) => s.user);
-  const isSuperadmin = !!user?.duties?.some((d) => d === "superadmin");
-  const isAdmin = !!user?.duties?.some((d) => d === "admin" || d === "superadmin");
+  const canAccessAllClasses = isAdminLike(user?.duties);
+  const isAdmin = isAdminLike(user?.duties);
+  const isTeacherRoleOnly = isTeacherOnly(user?.duties);
 
   const [classes, setClasses] = useState<ClassListItem[]>([]);
   const [subjects, setSubjects] = useState<SubjectListItem[]>([]);
   const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
   const [teachers, setTeachers] = useState<TeacherListItem[]>([]);
+  const [teacherSubjectIds, setTeacherSubjectIds] = useState<number[]>([]);
   const [activeAcademicYear, setActiveAcademicYear] = useState<AcademicYear | null>(null);
 
   const [selectedClassId, setSelectedClassId] = useState("-");
@@ -92,6 +96,11 @@ export default function ScoreManagementPage() {
 
   const isFinalScoreFilterSelected =
     isMobileOrTablet && selectedAssessmentId === FINAL_SCORE_FILTER_VALUE;
+  const visibleSubjects = useMemo(() => {
+    if (!isTeacherRoleOnly) return subjects;
+    if (selectedClassId === "-") return [];
+    return subjects.filter((subject) => teacherSubjectIds.includes(subject.id));
+  }, [isTeacherRoleOnly, selectedClassId, subjects, teacherSubjectIds]);
   const selectedAssessment = assessments.find((a) => a.id === Number(selectedAssessmentId)) || null;
   const assessmentsToRender = isMobileOrTablet
     ? selectedAssessment && !isFinalScoreFilterSelected
@@ -141,11 +150,11 @@ export default function ScoreManagementPage() {
       const [classRes, subjectRes, assessmentRes, academicYearRes] = await Promise.all([
         classService.list({
           limit: 100,
-          assigned_only: !isSuperadmin,
+          assigned_only: !canAccessAllClasses,
         }),
         subjectService.list({ limit: 100 }),
         assessmentService.list({ limit: 100, is_active: true }),
-        academicYearService.list({ limit: 100 }),
+        academicYearService.listPublic({ limit: 100 }),
       ]);
 
       if (isAdmin) {
@@ -169,7 +178,7 @@ export default function ScoreManagementPage() {
     } finally {
       setIsLoadingRefs(false);
     }
-  }, [isAdmin, isSuperadmin]);
+  }, [isAdmin, canAccessAllClasses]);
 
   const loadRows = useCallback(async () => {
     if (!canLoadRows) {
@@ -242,6 +251,81 @@ export default function ScoreManagementPage() {
     onChange();
     return () => mql.removeEventListener("change", onChange);
   }, []);
+
+  useEffect(() => {
+    if (!isTeacherRoleOnly) {
+      setTeacherSubjectIds([]);
+      return;
+    }
+
+    if (selectedClassId === "-" || !activeAcademicYear) {
+      setTeacherSubjectIds([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadTeacherSubjects = async () => {
+      try {
+        const classScheduleRes = await scheduleService.getClassSchedule(
+          Number(selectedClassId),
+          activeAcademicYear.id
+        );
+
+        const subjectIds = Array.from(
+          new Set(
+            classScheduleRes.data.slots
+              .filter((slot) => {
+                if (!slot.subject || !slot.teacher) {
+                  return false;
+                }
+                if (user?.nip) {
+                  return slot.teacher.nip === user.nip;
+                }
+                if (user?.name) {
+                  return slot.teacher.name === user.name;
+                }
+                return false;
+              })
+              .map((slot) => slot.subject!.id)
+          )
+        );
+
+        if (!cancelled) {
+          setTeacherSubjectIds(subjectIds);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTeacherSubjectIds([]);
+        }
+        const message =
+          axios.isAxiosError(err) && err.response?.data?.message
+            ? err.response.data.message
+            : "Gagal memuat mata pelajaran guru";
+        toast.error(message);
+      }
+    };
+
+    loadTeacherSubjects();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAcademicYear, isTeacherRoleOnly, selectedClassId, user?.name, user?.nip]);
+
+  useEffect(() => {
+    if (selectedSubjectId === "-") {
+      return;
+    }
+
+    const isSelectedSubjectVisible = visibleSubjects.some(
+      (subject) => String(subject.id) === selectedSubjectId
+    );
+
+    if (!isSelectedSubjectVisible) {
+      setSelectedSubjectId("-");
+    }
+  }, [selectedSubjectId, visibleSubjects]);
 
   useEffect(() => {
     if (!assessments.length) {
@@ -651,12 +735,12 @@ export default function ScoreManagementPage() {
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Mata Pelajaran</Label>
             <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full" disabled={isTeacherRoleOnly && selectedClassId === "-"}>
                 <SelectValue placeholder="Pilih mata pelajaran" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="-">Pilih mata pelajaran</SelectItem>
-                {subjects.map((s) => (
+                {visibleSubjects.map((s) => (
                   <SelectItem key={s.id} value={String(s.id)}>
                     {s.code} - {s.name}
                   </SelectItem>

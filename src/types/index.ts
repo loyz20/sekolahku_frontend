@@ -62,6 +62,24 @@ export interface HomeroomAssignment {
   assigned_at: string;
 }
 
+export interface LinkedTeacherProfile {
+  id: number;
+  nip: string;
+  name: string;
+  place_of_birth: string | null;
+  date_of_birth: string | null;
+  gender: "M" | "F" | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  specialization: string | null;
+  qualification: string | null;
+  user_id: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface UserActiveAssignments {
   duties: DutyAssignment[];
   homerooms: HomeroomAssignment[];
@@ -138,6 +156,7 @@ export interface UserProfile {
   email: string;
   is_active: boolean;
   is_protected: boolean;
+  teacher: LinkedTeacherProfile | null;
   duties: UserDutyInfo[];
   homerooms: HomeroomAssignment[];
   created_at: string;
@@ -355,6 +374,11 @@ export interface StudentListItem {
   email: string | null;
   is_active: boolean;
   created_at: string;
+  active_class?: {
+    id: number;
+    code: string;
+    name: string;
+  } | null;
 }
 
 export interface StudentEnrollment {
@@ -679,89 +703,6 @@ export interface TeachingAssignmentListParams {
   include_inactive?: boolean;
 }
 
-// Attendance (Absensi Pertemuan) types
-export type AttendanceStatus = "HADIR" | "SAKIT" | "IZIN" | "ALPA";
-
-export interface AttendanceMeetingListItem {
-  id: number;
-  meeting_no: number;
-  meeting_date: string;
-  topic: string | null;
-  created_at: string;
-  attendance_count: number;
-  teaching_assignment: {
-    id: number;
-    class: { id: number; code: string; name: string };
-    subject: { id: number; code: string; name: string };
-    teacher: { id: number; name: string; nip: string | null };
-    academic_year: { id: number; code: string; name: string };
-  };
-}
-
-export interface AttendanceRecordItem {
-  id: number;
-  student: {
-    id: number;
-    nis: string;
-    name: string;
-  };
-  status: AttendanceStatus;
-  notes: string | null;
-  marked_at: string;
-  updated_at: string;
-}
-
-export interface AttendanceMeetingDetail {
-  id: number;
-  meeting_no: number;
-  meeting_date: string;
-  topic: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  teaching_assignment: {
-    id: number;
-    class: { id: number; code: string; name: string };
-    subject: { id: number; code: string; name: string };
-    teacher: { id: number; name: string; nip: string | null };
-    academic_year: { id: number; code: string; name: string };
-  };
-  attendance: AttendanceRecordItem[];
-}
-
-export interface AttendanceMeetingListParams {
-  page?: number;
-  limit?: number;
-  class_id?: number;
-  subject_id?: number;
-  teacher_id?: number;
-  academic_year_id?: number;
-  meeting_date?: string;
-}
-
-export interface CreateAttendanceMeetingRequest {
-  teaching_assignment_id: number;
-  meeting_no?: number;
-  meeting_date: string;
-  topic?: string;
-  notes?: string;
-}
-
-export interface UpdateAttendanceMeetingRequest {
-  meeting_no?: number;
-  meeting_date?: string;
-  topic?: string | null;
-  notes?: string | null;
-}
-
-export interface UpsertMeetingAttendanceRequest {
-  records: Array<{
-    student_id: number;
-    status: AttendanceStatus;
-    notes?: string;
-  }>;
-}
-
 // Assessment & Score types
 export interface AssessmentItem {
   id: number;
@@ -847,4 +788,234 @@ export interface CreateScoreRequest {
 
 export interface UpdateScoreRequest {
   nilai: number;
+}
+
+export type AttendanceStatus = "hadir" | "izin" | "sakit" | "alpha";
+
+export interface AttendanceItem {
+  id: number;
+  student: {
+    id: number;
+    nis: string;
+    name: string;
+  };
+  subject: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  date: string;
+  status: AttendanceStatus;
+  notes: string | null;
+  recorded_by: {
+    id: number;
+    name: string;
+  } | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface AttendanceListParams {
+  page?: number;
+  limit?: number;
+  student_id?: number;
+  subject_id?: number;
+  date_from?: string;
+  date_to?: string;
+  status?: AttendanceStatus;
+}
+
+export interface CreateAttendanceRequest {
+  student_id: number;
+  subject_id: number;
+  date: string;
+  status: AttendanceStatus;
+  notes?: string;
+}
+
+export interface UpdateAttendanceRequest {
+  status?: AttendanceStatus;
+  notes?: string | null;
+}
+
+export interface BulkAttendanceEntry {
+  student_id: number;
+  status: AttendanceStatus;
+  notes?: string;
+}
+
+export interface BulkUpsertAttendanceRequest {
+  subject_id: number;
+  date: string;
+  entries: BulkAttendanceEntry[];
+}
+
+export interface AttendanceSummary {
+  total: number;
+  by_status: Record<AttendanceStatus, number>;
+  percentages: Record<AttendanceStatus, number>;
+}
+
+export type ViolationSeverity = "minor" | "moderate" | "severe";
+
+export interface ViolationTypeItem {
+  id: number;
+  code: string;
+  name: string;
+  severity: ViolationSeverity;
+  default_points: number;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ViolationTypeListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  severity?: ViolationSeverity;
+  is_active?: boolean;
+}
+
+export interface CreateViolationTypeRequest {
+  code?: string;
+  name: string;
+  severity: ViolationSeverity;
+  default_points?: number;
+  description?: string;
+  is_active?: boolean;
+}
+
+export interface UpdateViolationTypeRequest {
+  code?: string;
+  name?: string;
+  severity?: ViolationSeverity;
+  default_points?: number;
+  description?: string | null;
+  is_active?: boolean;
+}
+
+export interface ViolationItem {
+  id: number;
+  student: {
+    id: number;
+    nis: string;
+    name: string;
+  };
+  class: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  academic_year: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  violation_type: {
+    id: number;
+    code: string;
+    name: string;
+    severity: ViolationSeverity;
+  };
+  points: number;
+  violation_date: string;
+  description: string;
+  notes: string | null;
+  recorded_by: {
+    id: number;
+    name: string;
+  } | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ViolationStudentItem {
+  student: {
+    id: number;
+    nis: string;
+    name: string;
+  };
+  class: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  academic_year: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  total_violations: number;
+  total_points: number;
+  last_violation_date: string | null;
+  first_violation_date: string | null;
+  latest_violation_type: {
+    id: number;
+    code: string;
+    name: string;
+    severity: ViolationSeverity;
+  } | null;
+}
+
+export interface ViolationListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  student_id?: number;
+  class_id?: number;
+  academic_year_id?: number;
+  violation_type_id?: number;
+  severity?: ViolationSeverity;
+  date_from?: string;
+  date_to?: string;
+}
+
+export interface CreateViolationRequest {
+  student_id: number;
+  class_id: number;
+  academic_year_id: number;
+  violation_type_id: number;
+  violation_date: string;
+  points?: number;
+  description: string;
+  notes?: string;
+}
+
+export interface CreateBulkViolationRequest {
+  student_ids: number[];
+  class_id: number;
+  academic_year_id: number;
+  violation_type_id: number;
+  violation_date: string;
+  points?: number;
+  description: string;
+  notes?: string;
+}
+
+export interface UpdateViolationRequest {
+  student_id?: number;
+  class_id?: number;
+  academic_year_id?: number;
+  violation_type_id?: number;
+  violation_date?: string;
+  points?: number;
+  description?: string;
+  notes?: string | null;
+}
+
+export interface ViolationSummaryByType {
+  id: number;
+  code: string;
+  name: string;
+  total: number;
+  points: number;
+}
+
+export interface ViolationSummary {
+  total: number;
+  total_points: number;
+  by_severity: Record<ViolationSeverity, number>;
+  by_type: ViolationSummaryByType[];
 }

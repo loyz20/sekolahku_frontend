@@ -1,212 +1,369 @@
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import {
-  CalendarDays,
-  CheckCircle2,
-  ClipboardCheck,
-  Loader2,
-  Plus,
-} from "lucide-react";
+import { Loader2, Save } from "lucide-react";
+import { Link } from "react-router-dom";
 import { attendanceService } from "@/services/attendanceService";
 import { classService } from "@/services/classService";
 import { subjectService } from "@/services/subjectService";
-import { teacherService } from "@/services/teacherService";
-import { academicYearService } from "@/services/academicYearService";
 import { scheduleService } from "@/services/scheduleService";
+import { useAuthStore } from "@/stores/authStore";
+import { isAdminLike, isTeacherOnly } from "@/lib/roles";
 import type {
-  AttendanceMeetingListItem,
+  AttendanceItem,
   AttendanceStatus,
-  TeachingAssignment,
+  ClassListItem,
+  ClassStudentItem,
+  SubjectListItem,
 } from "@/types";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
-const ATTENDANCE_STATUS_OPTIONS: Array<{ value: AttendanceStatus; label: string }> = [
-  { value: "HADIR", label: "Hadir" },
-  { value: "SAKIT", label: "Sakit" },
-  { value: "IZIN", label: "Izin" },
-  { value: "ALPA", label: "Alpa" },
+const STATUS_OPTIONS: Array<{ value: AttendanceStatus; label: string }> = [
+  { value: "hadir", label: "Hadir" },
+  { value: "izin", label: "Izin" },
+  { value: "sakit", label: "Sakit" },
+  { value: "alpha", label: "Alpha" },
 ];
+
+const STATUS_LABEL: Record<AttendanceStatus, string> = {
+  hadir: "Hadir",
+  izin: "Izin",
+  sakit: "Sakit",
+  alpha: "Alpha",
+};
+
+const STATUS_BUTTON_CLASS: Record<AttendanceStatus, string> = {
+  hadir: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800",
+  izin: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800",
+  sakit: "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:text-sky-800",
+  alpha: "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800",
+};
 
 type AttendanceDraft = {
   status: AttendanceStatus;
   notes: string;
 };
 
+type AttendanceReportRow = {
+  studentId: number;
+  nis: string;
+  name: string;
+  hadirCount: number;
+  totalPertemuan: number;
+  persentaseKehadiran: number;
+};
+
 export default function AttendanceMeetingPage() {
-  const [page] = useState(1);
-  const limit = 20;
+  const user = useAuthStore((s) => s.user);
+  const canAccessAllClasses = isAdminLike(user?.duties);
+  const isTeacherRoleOnly = isTeacherOnly(user?.duties);
+  const selectedAcademicYearId = Number(localStorage.getItem("selectedAcademicYearId") || 0);
 
-  const [classFilter, setClassFilter] = useState("all");
-  const [subjectFilter, setSubjectFilter] = useState("all");
-  const [teacherFilter, setTeacherFilter] = useState("all");
-  const [academicYearFilter, setAcademicYearFilter] = useState("all");
-  const [meetingDateFilter, setMeetingDateFilter] = useState("");
-
-  const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
+  const [classes, setClasses] = useState<ClassListItem[]>([]);
+  const [subjects, setSubjects] = useState<SubjectListItem[]>([]);
+  const [teacherSubjectIds, setTeacherSubjectIds] = useState<number[]>([]);
+  const [students, setStudents] = useState<ClassStudentItem[]>([]);
+  const [records, setRecords] = useState<AttendanceItem[]>([]);
   const [drafts, setDrafts] = useState<Record<number, AttendanceDraft>>({});
-  const [isSavingAttendance, setIsSavingAttendance] = useState(false);
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createAssignmentId, setCreateAssignmentId] = useState("all");
-  const [createMeetingNo, setCreateMeetingNo] = useState("");
-  const [createMeetingDate, setCreateMeetingDate] = useState("");
-  const [createTopic, setCreateTopic] = useState("");
-  const [createNotes, setCreateNotes] = useState("");
-  const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState("-");
+  const [selectedSubjectId, setSelectedSubjectId] = useState("-");
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | AttendanceStatus>("all");
 
-  const { data: classesData } = useQuery({
-    queryKey: ["attendance-classes", { limit: 100 }],
-    queryFn: () => classService.list({ limit: 100 }),
-  });
+  const [isLoadingRefs, setIsLoadingRefs] = useState(true);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [attendanceReportRows, setAttendanceReportRows] = useState<AttendanceReportRow[]>([]);
 
-  const { data: subjectsData } = useQuery({
-    queryKey: ["attendance-subjects", { limit: 100 }],
-    queryFn: () => subjectService.list({ limit: 100 }),
-  });
+  const visibleSubjects = useMemo(() => {
+    if (!isTeacherRoleOnly) return subjects;
+    if (selectedClassId === "-") return [];
+    return subjects.filter((subject) => teacherSubjectIds.includes(subject.id));
+  }, [isTeacherRoleOnly, selectedClassId, subjects, teacherSubjectIds]);
 
-  const { data: teachersData } = useQuery({
-    queryKey: ["attendance-teachers", { limit: 100 }],
-    queryFn: () => teacherService.list({ limit: 100 }),
-  });
+  const canLoadRecords = selectedClassId !== "-" && selectedSubjectId !== "-" && !!selectedDate;
 
-  const { data: academicYearsData } = useQuery({
-    queryKey: ["attendance-academic-years", { limit: 100 }],
-    queryFn: () => academicYearService.list({ limit: 100 }),
-  });
-
-  const { data: assignmentsData } = useQuery({
-    queryKey: ["attendance-teaching-assignments", { limit: 100, include_inactive: false }],
-    queryFn: () =>
-      scheduleService.listTeachingAssignments({
-        limit: 100,
-        include_inactive: false,
-      }),
-  });
-
-  const {
-    data: meetingsData,
-    isLoading: isLoadingMeetings,
-    refetch: refetchMeetings,
-  } = useQuery({
-    queryKey: [
-      "attendance-meetings",
-      {
-        page,
-        limit,
-        classFilter,
-        subjectFilter,
-        teacherFilter,
-        academicYearFilter,
-        meetingDateFilter,
-      },
-    ],
-    queryFn: () =>
-      attendanceService.listMeetings({
-        page,
-        limit,
-        class_id: classFilter === "all" ? undefined : Number(classFilter),
-        subject_id: subjectFilter === "all" ? undefined : Number(subjectFilter),
-        teacher_id: teacherFilter === "all" ? undefined : Number(teacherFilter),
-        academic_year_id: academicYearFilter === "all" ? undefined : Number(academicYearFilter),
-        meeting_date: meetingDateFilter || undefined,
-      }),
-  });
-
-  const {
-    data: meetingDetailData,
-    isLoading: isLoadingMeetingDetail,
-    refetch: refetchMeetingDetail,
-  } = useQuery({
-    queryKey: ["attendance-meeting-detail", selectedMeetingId],
-    queryFn: () => attendanceService.getMeetingById(Number(selectedMeetingId)),
-    enabled: !!selectedMeetingId,
-  });
-
-  const meetingList = meetingsData?.data || [];
+  const loadReferences = useCallback(async () => {
+    setIsLoadingRefs(true);
+    try {
+      const [classRes, subjectRes] = await Promise.all([
+        classService.list({
+          limit: 100,
+          assigned_only: !canAccessAllClasses,
+        }),
+        subjectService.list({ limit: 100 }),
+      ]);
+      setClasses(classRes.data);
+      setSubjects(subjectRes.data);
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.message
+          ? err.response.data.message
+          : "Gagal memuat referensi absensi";
+      toast.error(message);
+    } finally {
+      setIsLoadingRefs(false);
+    }
+  }, [canAccessAllClasses]);
 
   useEffect(() => {
-    if (!meetingList.length) {
-      setSelectedMeetingId(null);
+    if (!isTeacherRoleOnly) {
+      setTeacherSubjectIds([]);
       return;
     }
 
-    if (!selectedMeetingId || !meetingList.some((m) => m.id === selectedMeetingId)) {
-      setSelectedMeetingId(meetingList[0].id);
+    if (selectedClassId === "-" || !selectedAcademicYearId) {
+      setTeacherSubjectIds([]);
+      return;
     }
-  }, [meetingList, selectedMeetingId]);
+
+    let cancelled = false;
+
+    const loadTeacherSubjects = async () => {
+      try {
+        const classScheduleRes = await scheduleService.getClassSchedule(
+          Number(selectedClassId),
+          selectedAcademicYearId
+        );
+
+        const subjectIds = Array.from(
+          new Set(
+            classScheduleRes.data.slots
+              .filter((slot) => {
+                if (!slot.subject || !slot.teacher) {
+                  return false;
+                }
+                if (user?.nip) {
+                  return slot.teacher.nip === user.nip;
+                }
+                if (user?.name) {
+                  return slot.teacher.name === user.name;
+                }
+                return false;
+              })
+              .map((slot) => slot.subject!.id)
+          )
+        );
+
+        if (!cancelled) {
+          setTeacherSubjectIds(subjectIds);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTeacherSubjectIds([]);
+        }
+        const message =
+          axios.isAxiosError(err) && err.response?.data?.message
+            ? err.response.data.message
+            : "Gagal memuat mata pelajaran guru";
+        toast.error(message);
+      }
+    };
+
+    void loadTeacherSubjects();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isTeacherRoleOnly, selectedClassId, selectedAcademicYearId, user?.name, user?.nip]);
 
   useEffect(() => {
-    const detail = meetingDetailData?.data;
-    if (!detail) {
+    if (selectedSubjectId === "-") return;
+
+    const isSelectedSubjectVisible = visibleSubjects.some(
+      (subject) => String(subject.id) === selectedSubjectId
+    );
+
+    if (!isSelectedSubjectVisible) {
+      setSelectedSubjectId("-");
+    }
+  }, [selectedSubjectId, visibleSubjects]);
+
+  const loadStudents = useCallback(async () => {
+    if (selectedClassId === "-") {
+      setStudents([]);
+      return;
+    }
+
+    setIsLoadingStudents(true);
+    try {
+      const classDetailRes = await classService.getById(Number(selectedClassId));
+      const activeStudents = classDetailRes.data.students.filter((s) => s.enrollment.is_active);
+      setStudents(activeStudents);
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.message
+          ? err.response.data.message
+          : "Gagal memuat siswa kelas";
+      toast.error(message);
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  }, [selectedClassId]);
+
+  const loadRecords = useCallback(async () => {
+    if (!canLoadRecords) {
+      setRecords([]);
       setDrafts({});
       return;
     }
 
-    const nextDrafts: Record<number, AttendanceDraft> = {};
-    for (const row of detail.attendance) {
-      nextDrafts[row.student.id] = {
-        status: row.status,
-        notes: row.notes || "",
-      };
+    setIsLoadingRecords(true);
+    try {
+      const allRecords: AttendanceItem[] = [];
+      let currentPage = 1;
+      let totalPages = 1;
+
+      do {
+        const attendanceRes = await attendanceService.list({
+          page: currentPage,
+          limit: 100,
+          subject_id: Number(selectedSubjectId),
+          date_from: selectedDate,
+          date_to: selectedDate,
+        });
+
+        allRecords.push(...attendanceRes.data);
+        totalPages = attendanceRes.meta?.totalPages || 1;
+        currentPage += 1;
+      } while (currentPage <= totalPages);
+
+      const classStudentIds = new Set(students.map((s) => s.id));
+      const classRecords = allRecords.filter((row) => classStudentIds.has(row.student.id));
+
+      const nextDrafts: Record<number, AttendanceDraft> = {};
+      for (const student of students) {
+        const matched = classRecords.find((row) => row.student.id === student.id);
+        nextDrafts[student.id] = {
+          status: matched?.status || "hadir",
+          notes: matched?.notes || "",
+        };
+      }
+
+      setRecords(classRecords);
+      setDrafts(nextDrafts);
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.message
+          ? err.response.data.message
+          : "Gagal memuat data absensi";
+      toast.error(message);
+    } finally {
+      setIsLoadingRecords(false);
     }
-    setDrafts(nextDrafts);
-  }, [meetingDetailData?.data]);
+  }, [canLoadRecords, selectedSubjectId, selectedDate, students]);
 
-  const selectedMeeting = useMemo(
-    () => meetingList.find((m) => m.id === selectedMeetingId) || null,
-    [meetingList, selectedMeetingId]
-  );
+  const loadAttendanceReport = useCallback(async () => {
+    if (selectedClassId === "-" || selectedSubjectId === "-" || !students.length) {
+      setAttendanceReportRows([]);
+      return;
+    }
 
-  const activeAssignments = useMemo(
-    () => (assignmentsData?.data || []).filter((a) => a.is_active),
-    [assignmentsData?.data]
-  );
+    setIsLoadingReport(true);
+    try {
+      const allRecords: AttendanceItem[] = [];
+      let currentPage = 1;
+      let totalPages = 1;
 
-  function resetCreateForm() {
-    setCreateAssignmentId("all");
-    setCreateMeetingNo("");
-    setCreateMeetingDate("");
-    setCreateTopic("");
-    setCreateNotes("");
-  }
+      do {
+        const attendanceRes = await attendanceService.list({
+          page: currentPage,
+          limit: 100,
+          subject_id: Number(selectedSubjectId),
+        });
 
-  function handleChangeDraftStatus(studentId: number, status: AttendanceStatus) {
+        allRecords.push(...attendanceRes.data);
+        totalPages = attendanceRes.meta?.totalPages || 1;
+        currentPage += 1;
+      } while (currentPage <= totalPages);
+
+      const classStudentIds = new Set(students.map((s) => s.id));
+      const classSubjectRecords = allRecords.filter((row) => classStudentIds.has(row.student.id));
+      const totalPertemuan = new Set(classSubjectRecords.map((row) => row.date)).size;
+
+      const nextRows: AttendanceReportRow[] = students.map((student) => {
+        const hadirCount = classSubjectRecords.filter(
+          (row) => row.student.id === student.id && row.status === "hadir"
+        ).length;
+
+        const persentaseKehadiran = totalPertemuan
+          ? Number(((hadirCount / totalPertemuan) * 100).toFixed(2))
+          : 0;
+
+        return {
+          studentId: student.id,
+          nis: student.nis,
+          name: student.name,
+          hadirCount,
+          totalPertemuan,
+          persentaseKehadiran,
+        };
+      });
+
+      setAttendanceReportRows(nextRows);
+    } catch (err) {
+      setAttendanceReportRows([]);
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.message
+          ? err.response.data.message
+          : "Gagal memuat laporan persentase kehadiran";
+      toast.error(message);
+    } finally {
+      setIsLoadingReport(false);
+    }
+  }, [selectedClassId, selectedSubjectId, students]);
+
+  useEffect(() => {
+    loadReferences();
+  }, [loadReferences]);
+
+  useEffect(() => {
+    loadStudents();
+  }, [loadStudents]);
+
+  useEffect(() => {
+    loadRecords();
+  }, [loadRecords]);
+
+  useEffect(() => {
+    loadAttendanceReport();
+  }, [loadAttendanceReport]);
+
+  const filteredStudents = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+
+    return students.filter((student) => {
+      const draft = drafts[student.id];
+      const status = draft?.status || "hadir";
+      const byStatus = statusFilter === "all" || status === statusFilter;
+      const byKeyword =
+        !keyword ||
+        student.name.toLowerCase().includes(keyword) ||
+        student.nis.toLowerCase().includes(keyword);
+      return byStatus && byKeyword;
+    });
+  }, [students, drafts, search, statusFilter]);
+
+  const summary = useMemo(() => {
+    const value = { hadir: 0, izin: 0, sakit: 0, alpha: 0 };
+    for (const student of students) {
+      const status = drafts[student.id]?.status || "hadir";
+      value[status] += 1;
+    }
+    return value;
+  }, [students, drafts]);
+
+  function onDraftStatusChange(studentId: number, status: AttendanceStatus) {
     setDrafts((prev) => ({
       ...prev,
       [studentId]: {
@@ -216,78 +373,35 @@ export default function AttendanceMeetingPage() {
     }));
   }
 
-  function handleChangeDraftNotes(studentId: number, notes: string) {
+  function onDraftNotesChange(studentId: number, notes: string) {
     setDrafts((prev) => ({
       ...prev,
       [studentId]: {
-        ...(prev[studentId] || { status: "HADIR" as AttendanceStatus }),
+        ...(prev[studentId] || { status: "hadir" }),
         notes,
       },
     }));
   }
 
-  async function handleCreateMeeting(e: React.FormEvent) {
-    e.preventDefault();
+  async function saveAttendance() {
+    if (!canLoadRecords || !students.length) return;
 
-    if (createAssignmentId === "all") {
-      toast.error("Pilih penugasan mengajar terlebih dahulu");
-      return;
-    }
-
-    if (!createMeetingDate) {
-      toast.error("Tanggal pertemuan wajib diisi");
-      return;
-    }
-
-    setIsCreatingMeeting(true);
+    setIsSaving(true);
     try {
-      const res = await attendanceService.createMeeting({
-        teaching_assignment_id: Number(createAssignmentId),
-        meeting_no: createMeetingNo ? Number(createMeetingNo) : undefined,
-        meeting_date: createMeetingDate,
-        topic: createTopic || undefined,
-        notes: createNotes || undefined,
+      const entries = students.map((student) => ({
+        student_id: student.id,
+        status: drafts[student.id]?.status || "hadir",
+        notes: drafts[student.id]?.notes?.trim() || undefined,
+      }));
+
+      await attendanceService.bulkUpsert({
+        subject_id: Number(selectedSubjectId),
+        date: selectedDate,
+        entries,
       });
 
-      toast.success("Pertemuan berhasil dibuat");
-      setCreateOpen(false);
-      resetCreateForm();
-      await refetchMeetings();
-      setSelectedMeetingId(res.data.id);
-    } catch (err) {
-      const message =
-        axios.isAxiosError(err) && err.response?.data?.message
-          ? err.response.data.message
-          : "Gagal membuat pertemuan";
-      toast.error(message);
-    } finally {
-      setIsCreatingMeeting(false);
-    }
-  }
-
-  async function handleSaveAttendance() {
-    if (!selectedMeetingId) return;
-
-    const detail = meetingDetailData?.data;
-    if (!detail) return;
-
-    const records = detail.attendance.map((row) => ({
-      student_id: row.student.id,
-      status: (drafts[row.student.id]?.status || row.status) as AttendanceStatus,
-      notes: drafts[row.student.id]?.notes || undefined,
-    }));
-
-    if (!records.length) {
-      toast.error("Tidak ada data absensi untuk disimpan");
-      return;
-    }
-
-    setIsSavingAttendance(true);
-    try {
-      await attendanceService.upsertMeetingAttendance(selectedMeetingId, { records });
-      toast.success("Absensi pertemuan berhasil disimpan");
-      await refetchMeetingDetail();
-      await refetchMeetings();
+      toast.success("Absensi berhasil disimpan");
+      await loadRecords();
     } catch (err) {
       const message =
         axios.isAxiosError(err) && err.response?.data?.message
@@ -295,168 +409,169 @@ export default function AttendanceMeetingPage() {
           : "Gagal menyimpan absensi";
       toast.error(message);
     } finally {
-      setIsSavingAttendance(false);
+      setIsSaving(false);
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Absensi Pertemuan</h1>
-          <p className="text-muted-foreground">
-            Kelola pertemuan mata pelajaran dan absensi siswa per pertemuan.
-          </p>
+      <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Absensi Siswa</h1>
+            <p className="text-muted-foreground">Kelola kehadiran harian per mata pelajaran.</p>
+          </div>
+          <Button variant="outline" asChild>
+            <Link to="/absensi/laporan">Buka Laporan Absensi</Link>
+          </Button>
         </div>
-        <Button className="w-full sm:w-auto" onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Buat Pertemuan
-        </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarDays className="size-5" />
-            Filter Pertemuan
-          </CardTitle>
-          <CardDescription>Pilih filter untuk mempersempit daftar pertemuan.</CardDescription>
+          <CardTitle>Filter Absensi</CardTitle>
+          <CardDescription>Pilih kelas, mata pelajaran, dan tanggal.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div className="space-y-2">
             <Label>Kelas</Label>
-            <Select value={classFilter} onValueChange={setClassFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+              <SelectTrigger><SelectValue placeholder="Pilih kelas" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua kelas</SelectItem>
-                {classesData?.data?.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>{c.code} - {c.name}</SelectItem>
+                <SelectItem value="-">Pilih kelas</SelectItem>
+                {classes.map((item) => (
+                  <SelectItem key={item.id} value={String(item.id)}>{item.code} - {item.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
             <Label>Mata Pelajaran</Label>
-            <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
+              <SelectTrigger disabled={isTeacherRoleOnly && selectedClassId === "-"}><SelectValue placeholder="Pilih mapel" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua mapel</SelectItem>
-                {subjectsData?.data?.map((s) => (
-                  <SelectItem key={s.id} value={String(s.id)}>{s.code} - {s.name}</SelectItem>
+                <SelectItem value="-">Pilih mapel</SelectItem>
+                {visibleSubjects.map((item) => (
+                  <SelectItem key={item.id} value={String(item.id)}>{item.code} - {item.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
-            <Label>Guru</Label>
-            <Select value={teacherFilter} onValueChange={setTeacherFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua guru</SelectItem>
-                {teachersData?.data?.map((t) => (
-                  <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Tahun Akademik</Label>
-            <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua tahun</SelectItem>
-                {academicYearsData?.data?.map((y) => (
-                  <SelectItem key={y.id} value={String(y.id)}>{y.code}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Tanggal Pertemuan</Label>
-            <Input type="date" value={meetingDateFilter} onChange={(e) => setMeetingDateFilter(e.target.value)} />
+            <Label>Tanggal</Label>
+            <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle>Daftar Pertemuan</CardTitle>
-            <CardDescription>{meetingsData?.meta ? `Total ${meetingsData.meta.total} pertemuan` : "Memuat..."}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingMeetings ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="size-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : meetingList.length === 0 ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">
-                Belum ada pertemuan yang sesuai filter.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {meetingList.map((m: AttendanceMeetingListItem) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setSelectedMeetingId(m.id)}
-                    className={`w-full rounded-lg border p-3 text-left transition ${selectedMeetingId === m.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium">Pertemuan #{m.meeting_no}</p>
-                      <Badge variant="outline">{m.meeting_date}</Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {m.teaching_assignment.class.code} - {m.teaching_assignment.subject.name}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {m.teaching_assignment.teacher.name} • {m.teaching_assignment.academic_year.code}
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Sudah tercatat: {m.attendance_count} siswa
-                    </p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>Daftar Absensi</CardTitle>
+            <CardDescription>
+              Ringkasan: Hadir {summary.hadir}, Izin {summary.izin}, Sakit {summary.sakit}, Alpha {summary.alpha}
+            </CardDescription>
+          </div>
+          <Button onClick={saveAttendance} disabled={!canLoadRecords || isSaving || !students.length}>
+            {isSaving && <Loader2 className="mr-2 size-4 animate-spin" />}
+            <Save className="mr-2 size-4" />
+            Simpan Absensi
+          </Button>
+        </CardHeader>
 
-        <Card className="xl:col-span-3">
-          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <ClipboardCheck className="size-5" />
-                Input Absensi
-              </CardTitle>
-              <CardDescription>
-                {selectedMeeting
-                  ? `${selectedMeeting.teaching_assignment.class.code} - ${selectedMeeting.teaching_assignment.subject.name}`
-                  : "Pilih pertemuan untuk mulai input absensi"}
-              </CardDescription>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <Input placeholder="Cari siswa (nama / NIS)" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | AttendanceStatus)}>
+              <SelectTrigger><SelectValue placeholder="Filter status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua status</SelectItem>
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Badge variant="secondary" className="justify-center md:justify-self-end">{records.length} record tersimpan</Badge>
+          </div>
+
+          {isLoadingRefs || isLoadingStudents || isLoadingRecords ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
-            <Button
-              className="w-full sm:w-auto"
-              onClick={handleSaveAttendance}
-              disabled={!selectedMeetingId || isSavingAttendance || !meetingDetailData?.data?.attendance?.length}
-            >
-              {isSavingAttendance && <Loader2 className="mr-2 size-4 animate-spin" />}
-              <CheckCircle2 className="mr-2 size-4" />
-              Simpan Absensi
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {!selectedMeetingId ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">
-                Pilih salah satu pertemuan pada daftar kiri.
+          ) : !canLoadRecords ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">Pilih filter terlebih dahulu.</div>
+          ) : !students.length ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">Tidak ada siswa aktif di kelas ini.</div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>NIS</TableHead>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Catatan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStudents.map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{student.nis}</TableCell>
+                        <TableCell className="font-medium">{student.name}</TableCell>
+                        <TableCell className="min-w-56">
+                          <div className="flex flex-wrap gap-2">
+                            {STATUS_OPTIONS.map((option) => {
+                              const isActive = (drafts[student.id]?.status || "hadir") === option.value;
+
+                              return (
+                                <Button
+                                  key={option.value}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className={`rounded-full px-3 ${STATUS_BUTTON_CLASS[option.value]} ${isActive ? "ring-2 ring-offset-2" : ""}`}
+                                  onClick={() => onDraftStatusChange(student.id, option.value)}
+                                >
+                                  <span className="mr-1 inline-flex size-2 rounded-full bg-current" />
+                                  {option.label}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={drafts[student.id]?.notes || ""}
+                            onChange={(e) => onDraftNotesChange(student.id, e.target.value)}
+                            placeholder={`Catatan (${STATUS_LABEL[drafts[student.id]?.status || "hadir"]})`}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            ) : isLoadingMeetingDetail ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </>
+          )}
+
+          <div className="space-y-3 pt-2">
+            <div>
+              <h3 className="text-sm font-semibold">Laporan Persentase Kehadiran</h3>
+              <p className="text-xs text-muted-foreground">
+                Persentase Kehadiran = (Jumlah Hadir / Total Pertemuan) x 100%
+              </p>
+            </div>
+
+            {isLoadingReport ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
-            ) : !meetingDetailData?.data?.attendance?.length ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">
-                Belum ada siswa aktif pada kelas pertemuan ini.
+            ) : !attendanceReportRows.length ? (
+              <div className="py-4 text-center text-xs text-muted-foreground">
+                Pilih kelas dan mata pelajaran untuk melihat laporan persentase kehadiran.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -465,38 +580,20 @@ export default function AttendanceMeetingPage() {
                     <TableRow>
                       <TableHead>NIS</TableHead>
                       <TableHead>Nama</TableHead>
-                      <TableHead className="w-36">Status</TableHead>
-                      <TableHead>Keterangan</TableHead>
+                      <TableHead className="text-right">Jumlah Hadir</TableHead>
+                      <TableHead className="text-right">Total Pertemuan</TableHead>
+                      <TableHead className="text-right">Persentase Kehadiran</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {meetingDetailData.data.attendance.map((row) => (
-                      <TableRow key={row.student.id}>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{row.student.nis}</TableCell>
-                        <TableCell className="font-medium">{row.student.name}</TableCell>
-                        <TableCell>
-                          <Select
-                            value={drafts[row.student.id]?.status || row.status}
-                            onValueChange={(value) => handleChangeDraftStatus(row.student.id, value as AttendanceStatus)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ATTENDANCE_STATUS_OPTIONS.map((opt) => (
-                                <SelectItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            placeholder="Opsional"
-                            value={drafts[row.student.id]?.notes || ""}
-                            onChange={(e) => handleChangeDraftNotes(row.student.id, e.target.value)}
-                          />
+                    {attendanceReportRows.map((row) => (
+                      <TableRow key={row.studentId}>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{row.nis}</TableCell>
+                        <TableCell className="font-medium">{row.name}</TableCell>
+                        <TableCell className="text-right">{row.hadirCount}</TableCell>
+                        <TableCell className="text-right">{row.totalPertemuan}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant="secondary">{row.persentaseKehadiran.toFixed(2)}%</Badge>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -504,95 +601,9 @@ export default function AttendanceMeetingPage() {
                 </Table>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Dialog
-        open={createOpen}
-        onOpenChange={(open) => {
-          setCreateOpen(open);
-          if (!open) resetCreateForm();
-        }}
-      >
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Buat Pertemuan Baru</DialogTitle>
-            <DialogDescription>
-              Pilih penugasan mengajar, tentukan tanggal, lalu simpan pertemuan.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleCreateMeeting} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Penugasan Mengajar</Label>
-              <Select value={createAssignmentId} onValueChange={setCreateAssignmentId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih penugasan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Pilih penugasan</SelectItem>
-                  {activeAssignments.map((a: TeachingAssignment) => (
-                    <SelectItem key={a.id} value={String(a.id)}>
-                      {a.class.code} - {a.subject.name} ({a.teacher.name})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Tanggal Pertemuan</Label>
-                <Input
-                  type="date"
-                  value={createMeetingDate}
-                  onChange={(e) => setCreateMeetingDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>No Pertemuan (Opsional)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={createMeetingNo}
-                  onChange={(e) => setCreateMeetingNo(e.target.value)}
-                  placeholder="Auto jika kosong"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Topik</Label>
-              <Input
-                value={createTopic}
-                onChange={(e) => setCreateTopic(e.target.value)}
-                placeholder="Contoh: Persamaan Linear"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Catatan</Label>
-              <Textarea
-                value={createNotes}
-                onChange={(e) => setCreateNotes(e.target.value)}
-                placeholder="Opsional"
-              />
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
-                Batal
-              </Button>
-              <Button type="submit" disabled={isCreatingMeeting}>
-                {isCreatingMeeting && <Loader2 className="mr-2 size-4 animate-spin" />}
-                Simpan Pertemuan
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

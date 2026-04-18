@@ -49,6 +49,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { PaginationControls } from "@/components/features/PaginationControls";
 import {
   Select,
   SelectContent,
@@ -84,8 +85,6 @@ import {
   Power,
   MoreHorizontal,
   Search,
-  ChevronLeft,
-  ChevronRight,
   GraduationCap,
   Clock,
   Languages,
@@ -127,6 +126,7 @@ export default function SettingsPage() {
   const [ayMeta, setAyMeta] = useState<PaginationMeta | null>(null);
   const [isLoadingAY, setIsLoadingAY] = useState(true);
   const [ayPage, setAyPage] = useState(1);
+  const [ayPageSize, setAyPageSize] = useState(10);
   const [aySearch, setAySearch] = useState("");
 
   // Create AY dialog
@@ -182,7 +182,7 @@ export default function SettingsPage() {
     try {
       const res = await academicYearService.list({
         page: ayPage,
-        limit: 10,
+        limit: ayPageSize,
         search: aySearch || undefined,
       });
       setAcademicYears(res.data);
@@ -196,7 +196,7 @@ export default function SettingsPage() {
     } finally {
       setIsLoadingAY(false);
     }
-  }, [ayPage, aySearch]);
+  }, [ayPage, ayPageSize, aySearch]);
 
   useEffect(() => {
     loadAcademicYears();
@@ -415,6 +415,11 @@ export default function SettingsPage() {
     );
   }
 
+  function handleAcademicYearPageSizeChange(nextPageSize: number) {
+    setAyPage(1);
+    setAyPageSize(nextPageSize);
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -553,27 +558,17 @@ export default function SettingsPage() {
                     <TableBody>
                       {academicYears.map((ay) => (
                         <TableRow key={ay.id}>
-                          <TableCell className="font-mono text-sm">
-                            {ay.code}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {ay.name}
-                          </TableCell>
+                          <TableCell className="font-mono text-sm">{ay.code}</TableCell>
+                          <TableCell className="font-medium">{ay.name}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
                               {ay.semester === 1 ? "Semester Ganjil" : "Semester Genap"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {ay.start_date}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {ay.end_date}
-                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{ay.start_date}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{ay.end_date}</TableCell>
                           <TableCell>
-                            <Badge
-                              variant={ay.is_active ? "default" : "secondary"}
-                            >
+                            <Badge variant={ay.is_active ? "default" : "secondary"}>
                               {ay.is_active ? "Aktif" : "Nonaktif"}
                             </Badge>
                           </TableCell>
@@ -585,16 +580,12 @@ export default function SettingsPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => openEditAY(ay)}
-                                >
+                                <DropdownMenuItem onClick={() => openEditAY(ay)}>
                                   <Pencil className="mr-2 size-4" />
                                   Edit
                                 </DropdownMenuItem>
                                 {!ay.is_active && (
-                                  <DropdownMenuItem
-                                    onClick={() => setActivateAY(ay)}
-                                  >
+                                  <DropdownMenuItem onClick={() => setActivateAY(ay)}>
                                     <Power className="mr-2 size-4" />
                                     Aktifkan
                                   </DropdownMenuItem>
@@ -616,33 +607,16 @@ export default function SettingsPage() {
                     </TableBody>
                   </Table>
 
-                  {/* Pagination */}
-                  {ayMeta && ayMeta.totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-4">
-                      <p className="text-sm text-muted-foreground">
-                        Halaman {ayMeta.page} dari {ayMeta.totalPages}
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={ayPage <= 1}
-                          onClick={() => setAyPage((p) => p - 1)}
-                        >
-                          <ChevronLeft className="mr-1 size-4" />
-                          Sebelumnya
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={ayPage >= ayMeta.totalPages}
-                          onClick={() => setAyPage((p) => p + 1)}
-                        >
-                          Selanjutnya
-                          <ChevronRight className="ml-1 size-4" />
-                        </Button>
-                      </div>
-                    </div>
+                  {ayMeta && (
+                    <PaginationControls
+                      currentPage={ayMeta.page}
+                      totalPages={ayMeta.totalPages}
+                      totalItems={ayMeta.total}
+                      pageSize={ayPageSize}
+                      itemLabel="tahun ajaran"
+                      onPageChange={setAyPage}
+                      onPageSizeChange={handleAcademicYearPageSizeChange}
+                    />
                   )}
                 </>
               )}

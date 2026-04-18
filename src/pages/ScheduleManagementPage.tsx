@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -8,6 +9,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Users,
 } from "lucide-react";
 import { scheduleService } from "@/services/scheduleService";
 import { classService } from "@/services/classService";
@@ -553,7 +555,13 @@ export default function ScheduleManagementPage() {
                 </Select>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button variant="outline" asChild>
+                  <Link to="/jadwal/teaching-assignments">
+                    <Users className="h-4 w-4" />
+                    Kelola Penugasan Guru
+                  </Link>
+                </Button>
                 <Button
                   onClick={() => setShowCreateDialog(true)}
                   disabled={!selectedClassId || !selectedAcademicYearId}

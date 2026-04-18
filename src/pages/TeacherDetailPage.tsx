@@ -48,6 +48,8 @@ import {
   Loader2,
   Plus,
   CheckCircle2,
+  AlertTriangle,
+  Trash2,
   Users,
   Mail,
   Shield,
@@ -69,6 +71,9 @@ export default function TeacherDetailPage() {
   const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
+  const [isRevokingAssignment, setIsRevokingAssignment] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<TeachingAssignment | null>(null);
   const selectedAcademicYearId = localStorage.getItem("selectedAcademicYearId") || "";
   const selectedAcademicYearName =
     localStorage.getItem("selectedAcademicYearName") || "Belum dipilih";
@@ -250,6 +255,26 @@ export default function TeacherDetailPage() {
     }
   };
 
+  const handleRevokeTeachingAssignment = async () => {
+    if (!teacher || !selectedAssignment) return;
+
+    setIsRevokingAssignment(true);
+    try {
+      await scheduleService.revokeTeachingAssignment(selectedAssignment.id);
+      notify("success", "Penugasan guru berhasil dicabut");
+      setShowRevokeDialog(false);
+      setSelectedAssignment(null);
+      await loadTeachingData(teacher.id);
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message || "Gagal mencabut penugasan guru";
+      notify("error", message);
+    } finally {
+      setIsRevokingAssignment(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -421,6 +446,7 @@ export default function TeacherDetailPage() {
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Tanggal Penugasan</TableHead>
                   <TableHead className="hidden lg:table-cell">Catatan</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -444,6 +470,24 @@ export default function TeacherDetailPage() {
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground lg:table-cell">
                       {assignment.notes ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {assignment.is_active ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => {
+                            setSelectedAssignment(assignment);
+                            setShowRevokeDialog(true);
+                          }}
+                        >
+                          <Trash2 className="mr-1 size-4" />
+                          Cabut
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -697,6 +741,72 @@ export default function TeacherDetailPage() {
               {isCreatingAssignment
                 ? "Menyimpan..."
                 : `Simpan ${formData.class_subject_ids.length > 0 ? `${formData.class_subject_ids.length} Penugasan` : "Penugasan"}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showRevokeDialog}
+        onOpenChange={(open) => {
+          setShowRevokeDialog(open);
+          if (!open) {
+            setSelectedAssignment(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="size-5" />
+              Cabut Penugasan Guru
+            </DialogTitle>
+            <DialogDescription>
+              Penugasan akan dinonaktifkan dan tidak dapat dipakai untuk jadwal baru.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAssignment && (
+            <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
+              <p>
+                <span className="font-semibold">Guru:</span> {teacher.name}
+              </p>
+              <p>
+                <span className="font-semibold">Kelas:</span> {selectedAssignment.class.code} - {selectedAssignment.class.name}
+              </p>
+              <p>
+                <span className="font-semibold">Mata Pelajaran:</span> {selectedAssignment.subject.name}
+              </p>
+              <p>
+                <span className="font-semibold">Tahun Ajaran:</span> {selectedAssignment.academic_year.name}
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRevokeDialog(false);
+                setSelectedAssignment(null);
+              }}
+              disabled={isRevokingAssignment}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRevokeTeachingAssignment}
+              disabled={isRevokingAssignment || !selectedAssignment}
+            >
+              {isRevokingAssignment ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Mencabut...
+                </>
+              ) : (
+                "Cabut Penugasan"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

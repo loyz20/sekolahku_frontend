@@ -60,6 +60,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { PaginationControls } from "@/components/features/PaginationControls";
 import {
   Briefcase,
   Loader2,
@@ -72,8 +73,6 @@ import {
   Pencil,
   Power,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Hash,
   MapPin,
   Calendar,
@@ -89,6 +88,7 @@ export default function TeacherManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
   const [filterSpecialization, setFilterSpecialization] = useState("");
 
@@ -137,7 +137,7 @@ export default function TeacherManagementPage() {
     try {
       const res = await teacherService.list({
         page,
-        limit: 10,
+        limit: pageSize,
         search: search || undefined,
         specialization: filterSpecialization || undefined,
       });
@@ -152,7 +152,7 @@ export default function TeacherManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, search, filterSpecialization]);
+  }, [page, pageSize, search, filterSpecialization]);
 
   useEffect(() => {
     loadTeachers();
@@ -166,6 +166,11 @@ export default function TeacherManagementPage() {
     setSearch("");
     setFilterSpecialization("");
     setPage(1);
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPage(1);
+    setPageSize(nextPageSize);
   }
 
   function resetCreateForm() {
@@ -542,34 +547,16 @@ export default function TeacherManagementPage() {
                 </TableBody>
               </Table>
 
-              {meta && meta.totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Halaman {meta.page} dari {meta.totalPages}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                      disabled={meta.page <= 1}
-                    >
-                      <ChevronLeft className="size-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setPage((prev) =>
-                          Math.min(meta.totalPages, prev + 1)
-                        )
-                      }
-                      disabled={meta.page >= meta.totalPages}
-                    >
-                      <ChevronRight className="size-4" />
-                    </Button>
-                  </div>
-                </div>
+              {meta && (
+                <PaginationControls
+                  currentPage={meta.page}
+                  totalPages={meta.totalPages}
+                  totalItems={meta.total}
+                  pageSize={pageSize}
+                  itemLabel="guru"
+                  onPageChange={setPage}
+                  onPageSizeChange={handlePageSizeChange}
+                />
               )}
             </>
           )}

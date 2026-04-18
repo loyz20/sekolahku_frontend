@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
 import { classService } from "@/services/classService";
-import type { ClassListItem, PaginationMeta } from "@/types";
+import { dutyService } from "@/services/dutyService";
+import { userService } from "@/services/userService";
+import type { ClassListItem, PaginationMeta, UserListItem } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +52,20 @@ import {
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { PaginationControls } from "@/components/features/PaginationControls";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Search,
   MoreHorizontal,
@@ -60,12 +76,12 @@ import {
   Pencil,
   Trash2,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   School,
   Hash,
   BookOpen,
   Layers,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 
 export default function ClassManagementPage() {
@@ -75,7 +91,8 @@ export default function ClassManagementPage() {
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const [pageSize, setPageSize] = useState(10);
+  const selectedAcademicYearId = localStorage.getItem("selectedAcademicYearId") || "";
 
   // Create class dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -101,12 +118,18 @@ export default function ClassManagementPage() {
   const [deleteClass, setDeleteClass] = useState<ClassListItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Inline homeroom assignment
+  const [homeroomCandidates, setHomeroomCandidates] = useState<UserListItem[]>([]);
+  const [isHomeroomCandidatesLoading, setIsHomeroomCandidatesLoading] = useState(false);
+  const [updatingHomeroomClassId, setUpdatingHomeroomClassId] = useState<number | null>(null);
+  const [openHomeroomPickerClassId, setOpenHomeroomPickerClassId] = useState<number | null>(null);
+
   const loadClasses = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await classService.list({
         page,
-        limit,
+        limit: pageSize,
         search: search || undefined,
         level: levelFilter || undefined,
       });
@@ -121,15 +144,77 @@ export default function ClassManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, search, levelFilter]);
+  }, [page, pageSize, search, levelFilter]);
 
   useEffect(() => {
     loadClasses();
   }, [loadClasses]);
 
+  useEffect(() => {
+    async function loadHomeroomCandidates() {
+      try {
+        setIsHomeroomCandidatesLoading(true);
+        const res = await userService.listUsers({ limit: 100, duty: "guru" });
+        setHomeroomCandidates(res.data.filter((user) => user.is_active));
+      } catch (err) {
+        const message =
+          axios.isAxiosError(err) && err.response?.data?.message
+            ? err.response.data.message
+            : "Gagal memuat kandidat wali kelas";
+        toast.error(message);
+      } finally {
+        setIsHomeroomCandidatesLoading(false);
+      }
+    }
+
+    void loadHomeroomCandidates();
+  }, []);
+
   function handleSearch() {
     setPage(1);
     loadClasses();
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPage(1);
+    setPageSize(nextPageSize);
+  }
+
+  async function handleInlineHomeroomChange(cls: ClassListItem, nextUserId: string) {
+    if (!selectedAcademicYearId) {
+      toast.error("Pilih tahun akademik terlebih dahulu");
+      return;
+    }
+
+    try {
+      setUpdatingHomeroomClassId(cls.id);
+
+      if (cls.homeroom_teacher) {
+        await dutyService.revokeHomeroom({
+          classId: cls.id,
+          academicYearId: Number(selectedAcademicYearId),
+        });
+      }
+
+      if (nextUserId !== "none") {
+        await dutyService.assignHomeroom({
+          userId: Number(nextUserId),
+          classId: cls.id,
+          academicYearId: Number(selectedAcademicYearId),
+        });
+      }
+
+      toast.success("Wali kelas berhasil diperbarui");
+      await loadClasses();
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.message
+          ? err.response.data.message
+          : "Gagal memperbarui wali kelas";
+      toast.error(message);
+    } finally {
+      setUpdatingHomeroomClassId(null);
+    }
   }
 
   // Create class
@@ -370,20 +455,73 @@ export default function ClassManagementPage() {
                         )}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {cls.homeroom_teacher ? (
-                          <div>
-                            <p className="text-sm font-medium">
-                              {cls.homeroom_teacher.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {cls.homeroom_teacher.academic_year.name}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            Belum ditentukan
-                          </span>
-                        )}
+                        <Popover
+                          open={openHomeroomPickerClassId === cls.id}
+                          onOpenChange={(open) => {
+                            setOpenHomeroomPickerClassId(open ? cls.id : null);
+                          }}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="h-9 min-w-56 justify-between"
+                              disabled={
+                                isHomeroomCandidatesLoading ||
+                                isLoading ||
+                                updatingHomeroomClassId === cls.id
+                              }
+                            >
+                              <span className="truncate text-left">
+                                {cls.homeroom_teacher ? cls.homeroom_teacher.name : "Belum ditentukan"}
+                              </span>
+                              <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[320px] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Cari guru (nama/NIP/email)..." />
+                              <CommandList>
+                                <CommandEmpty>Guru tidak ditemukan.</CommandEmpty>
+                                <CommandGroup>
+                                  <CommandItem
+                                    value="Belum ditentukan"
+                                    onSelect={() => {
+                                      void handleInlineHomeroomChange(cls, "none");
+                                      setOpenHomeroomPickerClassId(null);
+                                    }}
+                                  >
+                                    Belum ditentukan
+                                    {!cls.homeroom_teacher && <Check className="ml-auto size-4" />}
+                                  </CommandItem>
+                                  {homeroomCandidates.map((user) => {
+                                    const isSelected =
+                                      cls.homeroom_teacher?.name === user.name;
+
+                                    return (
+                                      <CommandItem
+                                        key={user.id}
+                                        value={`${user.name} ${user.nip || ""} ${user.email || ""}`}
+                                        onSelect={() => {
+                                          void handleInlineHomeroomChange(cls, String(user.id));
+                                          setOpenHomeroomPickerClassId(null);
+                                        }}
+                                      >
+                                        <div className="flex flex-col">
+                                          <span>{user.name}</span>
+                                          <span className="text-xs text-muted-foreground">
+                                            NIP: {user.nip || "-"}
+                                          </span>
+                                        </div>
+                                        {isSelected && <Check className="ml-auto size-4" />}
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </TableCell>
                       <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                         {cls.created_at}
@@ -422,33 +560,16 @@ export default function ClassManagementPage() {
                 </TableBody>
               </Table>
 
-              {/* Pagination */}
-              {meta && meta.totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Halaman {meta.page} dari {meta.totalPages}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => p - 1)}
-                    >
-                      <ChevronLeft className="mr-1 size-4" />
-                      Sebelumnya
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page >= meta.totalPages}
-                      onClick={() => setPage((p) => p + 1)}
-                    >
-                      Selanjutnya
-                      <ChevronRight className="ml-1 size-4" />
-                    </Button>
-                  </div>
-                </div>
+              {meta && (
+                <PaginationControls
+                  currentPage={meta.page}
+                  totalPages={meta.totalPages}
+                  totalItems={meta.total}
+                  pageSize={pageSize}
+                  itemLabel="kelas"
+                  onPageChange={setPage}
+                  onPageSizeChange={handlePageSizeChange}
+                />
               )}
             </>
           )}
