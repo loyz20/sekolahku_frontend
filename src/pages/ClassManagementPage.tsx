@@ -348,32 +348,46 @@ export default function ClassManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Manajemen Kelas
-          </h1>
-          <p className="text-muted-foreground">
-            Kelola data kelas dan pembagian rombongan belajar
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
-            <UploadCloud className="mr-2 size-4" />
-            Import
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 size-4" />
-            Tambah Kelas
-          </Button>
+      <div className="relative overflow-hidden rounded-3xl border border-cyan-100/80 bg-gradient-to-br from-sky-50 via-cyan-50 to-emerald-50 p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-36 w-36 rounded-full bg-cyan-200/35 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-200/30 blur-2xl" />
+
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <p className="inline-flex items-center rounded-full border border-cyan-200 bg-white/70 px-3 py-1 text-xs font-medium text-cyan-700">
+              Modul Akademik
+            </p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Manajemen Kelas</h1>
+            <p className="max-w-xl text-slate-600">
+              Kelola data kelas dan pembagian rombongan belajar
+            </p>
+          </div>
+
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setImportOpen(true)}
+              className="h-11 w-full justify-center bg-white/80 sm:w-auto"
+            >
+              <UploadCloud className="mr-2 size-4" />
+              Import
+            </Button>
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="h-11 w-full justify-center bg-gradient-to-r from-cyan-600 to-teal-600 text-white hover:from-cyan-700 hover:to-teal-700 sm:w-auto"
+            >
+              <Plus className="mr-2 size-4" />
+              Tambah Kelas
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
+          <div className="grid gap-3 lg:grid-cols-[1fr_220px_auto]">
+            <div className="relative">
               <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Cari kode atau nama kelas..."
@@ -388,9 +402,9 @@ export default function ClassManagementPage() {
               value={levelFilter}
               onChange={(e) => setLevelFilter(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="w-full sm:w-48"
+              className="w-full"
             />
-            <Button onClick={handleSearch} className="w-full sm:w-auto">
+            <Button onClick={handleSearch} className="w-full lg:w-auto">
               <Search className="mr-2 size-4" />
               Cari
             </Button>
@@ -420,145 +434,208 @@ export default function ClassManagementPage() {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="hidden sm:table-cell">Kode</TableHead>
-                    <TableHead>Nama Kelas</TableHead>
-                    <TableHead>Tingkat</TableHead>
-                    <TableHead className="hidden md:table-cell">Wali Kelas</TableHead>
-                    <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
-                    <TableHead className="w-12" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {classes.map((cls) => (
-                    <TableRow key={cls.id}>
-                      <TableCell className="hidden font-mono text-sm sm:table-cell">
-                        {cls.code}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <Link
-                          to={`/kelas/${cls.id}`}
-                          className="hover:underline"
-                        >
+              <div className="space-y-3 md:hidden">
+                {classes.map((cls) => (
+                  <div key={cls.id} className="rounded-xl border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link to={`/kelas/${cls.id}`} className="block truncate font-semibold hover:underline">
                           {cls.name}
                         </Link>
-                      </TableCell>
-                      <TableCell>
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">Kode: {cls.code}</p>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8 shrink-0">
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link to={`/kelas/${cls.id}`}>
+                              <Eye className="mr-2 size-4" />
+                              Lihat Detail
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEdit(cls)}>
+                            <Pencil className="mr-2 size-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setDeleteClass(cls)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">Tingkat</span>
                         {cls.level ? (
                           <Badge variant="outline">{cls.level}</Badge>
                         ) : (
-                          <span className="text-xs text-muted-foreground">
-                            -
-                          </span>
+                          <span className="text-xs text-muted-foreground">-</span>
                         )}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <Popover
-                          open={openHomeroomPickerClassId === cls.id}
-                          onOpenChange={(open) => {
-                            setOpenHomeroomPickerClassId(open ? cls.id : null);
-                          }}
-                        >
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className="h-9 min-w-56 justify-between"
-                              disabled={
-                                isHomeroomCandidatesLoading ||
-                                isLoading ||
-                                updatingHomeroomClassId === cls.id
-                              }
-                            >
-                              <span className="truncate text-left">
-                                {cls.homeroom_teacher ? cls.homeroom_teacher.name : "Belum ditentukan"}
-                              </span>
-                              <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[320px] p-0" align="start">
-                            <Command>
-                              <CommandInput placeholder="Cari guru (nama/NIP/email)..." />
-                              <CommandList>
-                                <CommandEmpty>Guru tidak ditemukan.</CommandEmpty>
-                                <CommandGroup>
-                                  <CommandItem
-                                    value="Belum ditentukan"
-                                    onSelect={() => {
-                                      void handleInlineHomeroomChange(cls, "none");
-                                      setOpenHomeroomPickerClassId(null);
-                                    }}
-                                  >
-                                    Belum ditentukan
-                                    {!cls.homeroom_teacher && <Check className="ml-auto size-4" />}
-                                  </CommandItem>
-                                  {homeroomCandidates.map((user) => {
-                                    const isSelected =
-                                      cls.homeroom_teacher?.name === user.name;
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">Wali Kelas</span>
+                        <span className="truncate text-right">{cls.homeroom_teacher ? cls.homeroom_teacher.name : "Belum ditentukan"}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">Dibuat</span>
+                        <span className="text-right text-xs text-muted-foreground">{cls.created_at}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-                                    return (
-                                      <CommandItem
-                                        key={user.id}
-                                        value={`${user.name} ${user.nip || ""} ${user.email || ""}`}
-                                        onSelect={() => {
-                                          void handleInlineHomeroomChange(cls, String(user.id));
-                                          setOpenHomeroomPickerClassId(null);
-                                        }}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span>{user.name}</span>
-                                          <span className="text-xs text-muted-foreground">
-                                            NIP: {user.nip || "-"}
-                                          </span>
-                                        </div>
-                                        {isSelected && <Check className="ml-auto size-4" />}
-                                      </CommandItem>
-                                    );
-                                  })}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </TableCell>
-                      <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
-                        {cls.created_at}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon-xs">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/kelas/${cls.id}`}>
-                                <Eye className="mr-2 size-4" />
-                                Lihat Detail
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEdit(cls)}>
-                              <Pencil className="mr-2 size-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => setDeleteClass(cls)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Hapus
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+              <div className="hidden overflow-x-auto rounded-xl border md:block">
+                <Table className="min-w-[980px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="hidden sm:table-cell">Kode</TableHead>
+                      <TableHead>Nama Kelas</TableHead>
+                      <TableHead>Tingkat</TableHead>
+                      <TableHead className="hidden md:table-cell">Wali Kelas</TableHead>
+                      <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
+                      <TableHead className="w-12" />
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {classes.map((cls) => (
+                      <TableRow key={cls.id}>
+                        <TableCell className="hidden font-mono text-sm sm:table-cell">
+                          {cls.code}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <Link
+                            to={`/kelas/${cls.id}`}
+                            className="hover:underline"
+                          >
+                            {cls.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {cls.level ? (
+                            <Badge variant="outline">{cls.level}</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              -
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <Popover
+                            open={openHomeroomPickerClassId === cls.id}
+                            onOpenChange={(open) => {
+                              setOpenHomeroomPickerClassId(open ? cls.id : null);
+                            }}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="h-9 min-w-56 justify-between"
+                                disabled={
+                                  isHomeroomCandidatesLoading ||
+                                  isLoading ||
+                                  updatingHomeroomClassId === cls.id
+                                }
+                              >
+                                <span className="truncate text-left">
+                                  {cls.homeroom_teacher ? cls.homeroom_teacher.name : "Belum ditentukan"}
+                                </span>
+                                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[320px] p-0" align="start">
+                              <Command>
+                                <CommandInput placeholder="Cari guru (nama/NIP/email)..." />
+                                <CommandList>
+                                  <CommandEmpty>Guru tidak ditemukan.</CommandEmpty>
+                                  <CommandGroup>
+                                    <CommandItem
+                                      value="Belum ditentukan"
+                                      onSelect={() => {
+                                        void handleInlineHomeroomChange(cls, "none");
+                                        setOpenHomeroomPickerClassId(null);
+                                      }}
+                                    >
+                                      Belum ditentukan
+                                      {!cls.homeroom_teacher && <Check className="ml-auto size-4" />}
+                                    </CommandItem>
+                                    {homeroomCandidates.map((user) => {
+                                      const isSelected =
+                                        cls.homeroom_teacher?.name === user.name;
+
+                                      return (
+                                        <CommandItem
+                                          key={user.id}
+                                          value={`${user.name} ${user.nip || ""} ${user.email || ""}`}
+                                          onSelect={() => {
+                                            void handleInlineHomeroomChange(cls, String(user.id));
+                                            setOpenHomeroomPickerClassId(null);
+                                          }}
+                                        >
+                                          <div className="flex flex-col">
+                                            <span>{user.name}</span>
+                                            <span className="text-xs text-muted-foreground">
+                                              NIP: {user.nip || "-"}
+                                            </span>
+                                          </div>
+                                          {isSelected && <Check className="ml-auto size-4" />}
+                                        </CommandItem>
+                                      );
+                                    })}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </TableCell>
+                        <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
+                          {cls.created_at}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon-xs">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem asChild>
+                                <Link to={`/kelas/${cls.id}`}>
+                                  <Eye className="mr-2 size-4" />
+                                  Lihat Detail
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEdit(cls)}>
+                                <Pencil className="mr-2 size-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => setDeleteClass(cls)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 size-4" />
+                                Hapus
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               {meta && (
                 <PaginationControls
@@ -609,11 +686,11 @@ export default function ClassManagementPage() {
                   onChange={(e) => setCreateCode(e.target.value)}
                   required
                   maxLength={30}
-                  placeholder="X-IPA-1"
-                  pattern="^[a-zA-Z0-9\-_]+$"
+                  placeholder="X.E-1"
+                  pattern="^[a-zA-Z0-9._\-]+$"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Huruf, angka, - dan _ saja
+                  Huruf, angka, titik (.), - dan _ saja
                 </p>
               </div>
               <div className="space-y-2">
@@ -718,7 +795,7 @@ export default function ClassManagementPage() {
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
-                Header yang didukung: Kode, Nama, Tingkat.
+                Header yang didukung: Kode, Nama, Tingkat. Contoh kode: X.E-1.
               </p>
             </div>
             <Separator className="my-2" />
@@ -766,7 +843,7 @@ export default function ClassManagementPage() {
                 value={editCode}
                 onChange={(e) => setEditCode(e.target.value)}
                 maxLength={30}
-                pattern="^[a-zA-Z0-9\-_]+$"
+                pattern="^[a-zA-Z0-9._\-]+$"
               />
             </div>
             <div className="space-y-2">

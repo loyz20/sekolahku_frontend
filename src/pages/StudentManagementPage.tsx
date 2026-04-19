@@ -391,22 +391,38 @@ export default function StudentManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Manajemen Siswa</h1>
-          <p className="text-muted-foreground">
-            Kelola data siswa, status aktif, dan filter kelas/tahun ajaran
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
-            <UploadCloud className="mr-2 size-4" />
-            Import
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 size-4" />
-            Tambah Siswa
-          </Button>
+      <div className="relative overflow-hidden rounded-3xl border border-cyan-100/80 bg-gradient-to-br from-sky-50 via-cyan-50 to-emerald-50 p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-36 w-36 rounded-full bg-cyan-200/35 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-200/30 blur-2xl" />
+
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <p className="inline-flex items-center rounded-full border border-cyan-200 bg-white/70 px-3 py-1 text-xs font-medium text-cyan-700">
+              Modul Akademik
+            </p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Manajemen Siswa</h1>
+            <p className="max-w-xl text-slate-600">
+              Kelola data siswa, status aktif, dan filter kelas/tahun ajaran
+            </p>
+          </div>
+
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setImportOpen(true)}
+              className="h-11 w-full justify-center bg-white/80 sm:w-auto"
+            >
+              <UploadCloud className="mr-2 size-4" />
+              Import
+            </Button>
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="h-11 w-full justify-center bg-gradient-to-r from-cyan-600 to-teal-600 text-white hover:from-cyan-700 hover:to-teal-700 sm:w-auto"
+            >
+              <Plus className="mr-2 size-4" />
+              Tambah Siswa
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -500,83 +516,152 @@ export default function StudentManagementPage() {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="hidden sm:table-cell">NIS</TableHead>
-                    <TableHead>Nama</TableHead>
-                    <TableHead className="hidden md:table-cell">Kelas</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
-                    <TableHead className="w-12" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {students.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
-                        {student.nis}
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/siswa/${student.id}`} className="font-medium hover:underline">
+              <div className="space-y-3 md:hidden">
+                {students.map((student) => (
+                  <div key={student.id} className="rounded-xl border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link to={`/siswa/${student.id}`} className="block truncate font-semibold hover:underline">
                           {student.name}
                         </Link>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {student.active_class ? (
-                          <div>
-                            <p className="text-sm font-medium">{student.active_class.code}</p>
-                            <p className="text-xs text-muted-foreground">{student.active_class.name}</p>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Belum ada kelas</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">NIS: {student.nis}</p>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8 shrink-0">
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem asChild>
+                            <Link to={`/siswa/${student.id}`}>
+                              <Eye className="mr-2 size-4" />
+                              Detail
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditStudent(student.id)}>
+                            <Pencil className="mr-2 size-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setToggleStudent(student)}>
+                            <Power className="mr-2 size-4" />
+                            {student.is_active ? "Nonaktifkan" : "Aktifkan"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeleteStudent(student)}
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">Kelas</span>
+                        <span className="truncate text-right">
+                          {student.active_class
+                            ? `${student.active_class.code} - ${student.active_class.name}`
+                            : "Belum ada kelas"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">Status</span>
                         <Badge variant={student.is_active ? "default" : "secondary"}>
                           {student.is_active ? "Aktif" : "Nonaktif"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
-                        {student.created_at}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/siswa/${student.id}`}>
-                                <Eye className="mr-2 size-4" />
-                                Detail
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditStudent(student.id)}>
-                              <Pencil className="mr-2 size-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setToggleStudent(student)}>
-                              <Power className="mr-2 size-4" />
-                              {student.is_active ? "Nonaktifkan" : "Aktifkan"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => setDeleteStudent(student)}
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Hapus
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">Dibuat</span>
+                        <span className="text-right text-xs text-muted-foreground">{student.created_at}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-xl border md:block">
+                <Table className="min-w-[900px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="hidden sm:table-cell">NIS</TableHead>
+                      <TableHead>Nama</TableHead>
+                      <TableHead className="hidden md:table-cell">Kelas</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
+                      <TableHead className="w-12" />
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {students.map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
+                          {student.nis}
+                        </TableCell>
+                        <TableCell>
+                          <Link to={`/siswa/${student.id}`} className="font-medium hover:underline">
+                            {student.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {student.active_class ? (
+                            <div>
+                              <p className="text-sm font-medium">{student.active_class.code}</p>
+                              <p className="text-xs text-muted-foreground">{student.active_class.name}</p>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Belum ada kelas</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={student.is_active ? "default" : "secondary"}>
+                            {student.is_active ? "Aktif" : "Nonaktif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
+                          {student.created_at}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="size-8">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem asChild>
+                                <Link to={`/siswa/${student.id}`}>
+                                  <Eye className="mr-2 size-4" />
+                                  Detail
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEditStudent(student.id)}>
+                                <Pencil className="mr-2 size-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setToggleStudent(student)}>
+                                <Power className="mr-2 size-4" />
+                                {student.is_active ? "Nonaktifkan" : "Aktifkan"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => setDeleteStudent(student)}
+                              >
+                                <Trash2 className="mr-2 size-4" />
+                                Hapus
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               {meta && (
                 <PaginationControls
@@ -810,7 +895,7 @@ export default function StudentManagementPage() {
 
             <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
               Penetapan kelas saat import sekarang mengikuti kolom <span className="font-semibold text-foreground">Kelas</span>
-              di template. Gunakan format <span className="font-semibold text-foreground">KODE - NAMA</span> sesuai sheet
+              di template. Gunakan <span className="font-semibold text-foreground">KODE KELAS</span> saja sesuai sheet
               <span className="font-semibold text-foreground"> Pilihan Kelas</span> pada file template.
             </div>
 

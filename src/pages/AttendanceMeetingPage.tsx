@@ -50,15 +50,6 @@ type AttendanceDraft = {
   notes: string;
 };
 
-type AttendanceReportRow = {
-  studentId: number;
-  nis: string;
-  name: string;
-  hadirCount: number;
-  totalPertemuan: number;
-  persentaseKehadiran: number;
-};
-
 export default function AttendanceMeetingPage() {
   const user = useAuthStore((s) => s.user);
   const canAccessAllClasses = isAdminLike(user?.duties);
@@ -81,9 +72,7 @@ export default function AttendanceMeetingPage() {
   const [isLoadingRefs, setIsLoadingRefs] = useState(true);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
-  const [isLoadingReport, setIsLoadingReport] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [attendanceReportRows, setAttendanceReportRows] = useState<AttendanceReportRow[]>([]);
 
   const visibleSubjects = useMemo(() => {
     if (!isTeacherRoleOnly) return subjects;
@@ -263,66 +252,6 @@ export default function AttendanceMeetingPage() {
     }
   }, [canLoadRecords, selectedSubjectId, selectedDate, students]);
 
-  const loadAttendanceReport = useCallback(async () => {
-    if (selectedClassId === "-" || selectedSubjectId === "-" || !students.length) {
-      setAttendanceReportRows([]);
-      return;
-    }
-
-    setIsLoadingReport(true);
-    try {
-      const allRecords: AttendanceItem[] = [];
-      let currentPage = 1;
-      let totalPages = 1;
-
-      do {
-        const attendanceRes = await attendanceService.list({
-          page: currentPage,
-          limit: 100,
-          subject_id: Number(selectedSubjectId),
-        });
-
-        allRecords.push(...attendanceRes.data);
-        totalPages = attendanceRes.meta?.totalPages || 1;
-        currentPage += 1;
-      } while (currentPage <= totalPages);
-
-      const classStudentIds = new Set(students.map((s) => s.id));
-      const classSubjectRecords = allRecords.filter((row) => classStudentIds.has(row.student.id));
-      const totalPertemuan = new Set(classSubjectRecords.map((row) => row.date)).size;
-
-      const nextRows: AttendanceReportRow[] = students.map((student) => {
-        const hadirCount = classSubjectRecords.filter(
-          (row) => row.student.id === student.id && row.status === "hadir"
-        ).length;
-
-        const persentaseKehadiran = totalPertemuan
-          ? Number(((hadirCount / totalPertemuan) * 100).toFixed(2))
-          : 0;
-
-        return {
-          studentId: student.id,
-          nis: student.nis,
-          name: student.name,
-          hadirCount,
-          totalPertemuan,
-          persentaseKehadiran,
-        };
-      });
-
-      setAttendanceReportRows(nextRows);
-    } catch (err) {
-      setAttendanceReportRows([]);
-      const message =
-        axios.isAxiosError(err) && err.response?.data?.message
-          ? err.response.data.message
-          : "Gagal memuat laporan persentase kehadiran";
-      toast.error(message);
-    } finally {
-      setIsLoadingReport(false);
-    }
-  }, [selectedClassId, selectedSubjectId, students]);
-
   useEffect(() => {
     loadReferences();
   }, [loadReferences]);
@@ -334,10 +263,6 @@ export default function AttendanceMeetingPage() {
   useEffect(() => {
     loadRecords();
   }, [loadRecords]);
-
-  useEffect(() => {
-    loadAttendanceReport();
-  }, [loadAttendanceReport]);
 
   const filteredStudents = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -436,7 +361,7 @@ export default function AttendanceMeetingPage() {
           <div className="space-y-2">
             <Label>Kelas</Label>
             <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-              <SelectTrigger><SelectValue placeholder="Pilih kelas" /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Pilih kelas" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="-">Pilih kelas</SelectItem>
                 {classes.map((item) => (
@@ -449,7 +374,7 @@ export default function AttendanceMeetingPage() {
           <div className="space-y-2">
             <Label>Mata Pelajaran</Label>
             <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
-              <SelectTrigger disabled={isTeacherRoleOnly && selectedClassId === "-"}><SelectValue placeholder="Pilih mapel" /></SelectTrigger>
+              <SelectTrigger className="w-full" disabled={isTeacherRoleOnly && selectedClassId === "-"}><SelectValue placeholder="Pilih mapel" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="-">Pilih mapel</SelectItem>
                 {visibleSubjects.map((item) => (
@@ -485,7 +410,7 @@ export default function AttendanceMeetingPage() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <Input placeholder="Cari siswa (nama / NIS)" value={search} onChange={(e) => setSearch(e.target.value)} />
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | AttendanceStatus)}>
-              <SelectTrigger><SelectValue placeholder="Filter status" /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Filter status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua status</SelectItem>
                 {STATUS_OPTIONS.map((option) => (
@@ -506,7 +431,47 @@ export default function AttendanceMeetingPage() {
             <div className="py-8 text-center text-sm text-muted-foreground">Tidak ada siswa aktif di kelas ini.</div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <div className="space-y-3 lg:hidden">
+                {filteredStudents.map((student) => (
+                  <div key={student.id} className="rounded-xl border p-3">
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{student.name}</p>
+                        <p className="font-mono text-xs text-muted-foreground">NIS: {student.nis}</p>
+                      </div>
+                      <Badge variant="outline">{STATUS_LABEL[drafts[student.id]?.status || "hadir"]}</Badge>
+                    </div>
+
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      {STATUS_OPTIONS.map((option) => {
+                        const isActive = (drafts[student.id]?.status || "hadir") === option.value;
+
+                        return (
+                          <Button
+                            key={option.value}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className={`rounded-full px-3 ${STATUS_BUTTON_CLASS[option.value]} ${isActive ? "ring-2 ring-offset-2" : ""}`}
+                            onClick={() => onDraftStatusChange(student.id, option.value)}
+                          >
+                            <span className="mr-1 inline-flex size-2 rounded-full bg-current" />
+                            {option.label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    <Input
+                      value={drafts[student.id]?.notes || ""}
+                      onChange={(e) => onDraftNotesChange(student.id, e.target.value)}
+                      placeholder={`Catatan (${STATUS_LABEL[drafts[student.id]?.status || "hadir"]})`}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto lg:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -557,51 +522,6 @@ export default function AttendanceMeetingPage() {
             </>
           )}
 
-          <div className="space-y-3 pt-2">
-            <div>
-              <h3 className="text-sm font-semibold">Laporan Persentase Kehadiran</h3>
-              <p className="text-xs text-muted-foreground">
-                Persentase Kehadiran = (Jumlah Hadir / Total Pertemuan) x 100%
-              </p>
-            </div>
-
-            {isLoadingReport ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : !attendanceReportRows.length ? (
-              <div className="py-4 text-center text-xs text-muted-foreground">
-                Pilih kelas dan mata pelajaran untuk melihat laporan persentase kehadiran.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>NIS</TableHead>
-                      <TableHead>Nama</TableHead>
-                      <TableHead className="text-right">Jumlah Hadir</TableHead>
-                      <TableHead className="text-right">Total Pertemuan</TableHead>
-                      <TableHead className="text-right">Persentase Kehadiran</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {attendanceReportRows.map((row) => (
-                      <TableRow key={row.studentId}>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{row.nis}</TableCell>
-                        <TableCell className="font-medium">{row.name}</TableCell>
-                        <TableCell className="text-right">{row.hadirCount}</TableCell>
-                        <TableCell className="text-right">{row.totalPertemuan}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="secondary">{row.persentaseKehadiran.toFixed(2)}%</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
         </CardContent>
       </Card>
     </div>

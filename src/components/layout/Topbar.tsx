@@ -18,9 +18,6 @@ const pageTitles: Record<string, string> = {
   "/siswa": "Siswa",
   "/guru": "Guru",
   "/mapel": "Mata Pelajaran",
-  "/jadwal": "Jadwal Pembelajaran",
-  "/jadwal/class-subjects": "Manajemen Mapel Kelas",
-  "/jadwal/teaching-assignments": "Manajemen Penugasan Guru",
   "/nilai": "Nilai",
   "/absensi": "Absensi",
   "/absensi/laporan": "Laporan Absensi",
@@ -53,8 +50,6 @@ export function Topbar() {
             ? "Detail Pengguna"
             : path.startsWith("/kelas/")
               ? "Detail Kelas"
-              : path.startsWith("/jadwal/")
-                ? "Jadwal Pembelajaran"
                 : "Halaman");
 
   // Update document title

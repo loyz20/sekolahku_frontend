@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
+import { academicYearService } from "@/services/academicYearService";
 import { teacherService } from "@/services/teacherService";
 import { scheduleService } from "@/services/scheduleService";
+import { subjectService } from "@/services/subjectService";
 import { useNotification } from "@/hooks/use-notification";
-import type { ClassSubjectMapping, TeacherDetail, TeachingAssignment } from "@/types";
+import type { ClassSubjectMapping, SubjectListItem, TeacherDetail, TeachingAssignment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,13 +19,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -58,6 +53,8 @@ import {
   Briefcase,
   Phone,
   MapPin,
+  ChevronDown,
+  ChevronUp,
   User as UserIcon,
 } from "lucide-react";
 
@@ -66,17 +63,23 @@ export default function TeacherDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [teacher, setTeacher] = useState<TeacherDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [subjects, setSubjects] = useState<SubjectListItem[]>([]);
   const [teachingAssignments, setTeachingAssignments] = useState<TeachingAssignment[]>([]);
   const [classSubjects, setClassSubjects] = useState<ClassSubjectMapping[]>([]);
   const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(false);
+  const [isSubjectsLoading, setIsSubjectsLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
   const [showRevokeDialog, setShowRevokeDialog] = useState(false);
   const [isRevokingAssignment, setIsRevokingAssignment] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<TeachingAssignment | null>(null);
-  const selectedAcademicYearId = localStorage.getItem("selectedAcademicYearId") || "";
-  const selectedAcademicYearName =
-    localStorage.getItem("selectedAcademicYearName") || "Belum dipilih";
+  const [isAssignmentsSectionOpen, setIsAssignmentsSectionOpen] = useState(true);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(
+    () => localStorage.getItem("selectedAcademicYearId") || ""
+  );
+  const [selectedAcademicYearName, setSelectedAcademicYearName] = useState(
+    () => localStorage.getItem("selectedAcademicYearName") || "Belum dipilih"
+  );
   const [formData, setFormData] = useState({
     subject_id: "",
     class_subject_ids: [] as string[],
@@ -131,10 +134,61 @@ export default function TeacherDetailPage() {
   );
 
   useEffect(() => {
+    if (selectedAcademicYearId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const resolveAcademicYear = async () => {
+      try {
+        const res = await academicYearService.listPublic({ limit: 100 });
+        if (!isMounted) return;
+
+        const years = res.data ?? [];
+        const selected = years.find((year) => year.is_active) || years[0] || null;
+
+        if (!selected) return;
+
+        setSelectedAcademicYearId(String(selected.id));
+        setSelectedAcademicYearName(selected.name);
+        localStorage.setItem("selectedAcademicYearId", String(selected.id));
+        localStorage.setItem("selectedAcademicYearName", selected.name);
+        localStorage.setItem("selectedAcademicYearCode", selected.code);
+      } catch {
+        // Fallback is optional; keep the existing empty state if loading fails.
+      }
+    };
+
+    void resolveAcademicYear();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedAcademicYearId]);
+
+  const loadSubjects = useCallback(async () => {
+    setIsSubjectsLoading(true);
+    try {
+      const res = await subjectService.list({ limit: 100 });
+      setSubjects(res.data);
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.message
+          ? err.response.data.message
+          : "Gagal memuat daftar mata pelajaran";
+      toast.error(message);
+    } finally {
+      setIsSubjectsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!id) return;
     loadTeacher(Number(id));
     loadTeachingData(Number(id));
-  }, [id, loadTeachingData]);
+    loadSubjects();
+  }, [id, loadTeachingData, loadSubjects]);
 
   async function loadTeacher(teacherId: number) {
     setIsLoading(true);
@@ -156,13 +210,13 @@ export default function TeacherDetailPage() {
     () =>
       Array.from(
         new Map(
-          classSubjects.map((item) => [
-            item.subject.id,
-            { id: item.subject.id, code: item.subject.code, name: item.subject.name },
+          subjects.map((subject) => [
+            subject.id,
+            { id: subject.id, code: subject.code, name: subject.name },
           ])
         ).values()
       ),
-    [classSubjects]
+    [subjects]
   );
 
   const selectableClassesBySubject = useMemo(
@@ -304,24 +358,41 @@ export default function TeacherDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/guru">
-            <ArrowLeft className="mr-2 size-4" />
-            Kembali
-          </Link>
-        </Button>
-        <Button
-          onClick={() => {
-            resetCreateForm();
-            setShowCreateDialog(true);
-          }}
-          className="gap-2"
-          disabled={!selectedAcademicYearId}
-        >
-          <Plus className="size-4" />
-          Tambah Penugasan Guru
-        </Button>
+      <div className="relative overflow-hidden rounded-3xl border border-cyan-100/80 bg-gradient-to-br from-sky-50 via-cyan-50 to-emerald-50 p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-36 w-36 rounded-full bg-cyan-200/35 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-200/30 blur-2xl" />
+
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
+              <Link to="/guru">
+                <ArrowLeft className="mr-2 size-4" />
+                Kembali
+              </Link>
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{teacher.name}</h1>
+            <p className="text-slate-600">Detail profil guru, penugasan mengajar, dan riwayat tugas aktif</p>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={teacher.is_active ? "default" : "secondary"}>
+                {teacher.is_active ? "Aktif" : "Nonaktif"}
+              </Badge>
+              <Badge variant="secondary">NIP: {teacher.nip}</Badge>
+              <Badge variant="outline">Tahun Ajaran: {selectedAcademicYearName}</Badge>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => {
+              resetCreateForm();
+              setShowCreateDialog(true);
+            }}
+            className="w-full gap-2 lg:w-auto"
+            disabled={!selectedAcademicYearId}
+          >
+            <Plus className="size-4" />
+            Tambah Penugasan Guru
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -334,7 +405,7 @@ export default function TeacherDetailPage() {
               <CardTitle className="text-xl">{teacher.name}</CardTitle>
               <CardDescription>NIP: {teacher.nip}</CardDescription>
             </div>
-            <Badge variant={teacher.is_active ? "default" : "secondary"} className="ml-auto">
+            <Badge variant={teacher.is_active ? "default" : "secondary"} className="ml-auto hidden sm:inline-flex">
               {teacher.is_active ? "Aktif" : "Nonaktif"}
             </Badge>
           </div>
@@ -370,9 +441,9 @@ export default function TeacherDetailPage() {
             </div>
             <div className="flex items-center gap-2 rounded-lg border p-3">
               <Mail className="size-4 text-muted-foreground" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-muted-foreground">Email</p>
-                <p className="text-sm font-medium">{teacher.email ?? "-"}</p>
+                <p className="truncate text-sm font-medium">{teacher.email ?? "-"}</p>
               </div>
             </div>
           </div>
@@ -417,11 +488,32 @@ export default function TeacherDetailPage() {
                 Penugasan mengajar guru ini pada tahun ajaran login
               </CardDescription>
             </div>
-            <Badge variant="secondary">Tahun Ajaran: {selectedAcademicYearName}</Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">Tahun Ajaran: {selectedAcademicYearName}</Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAssignmentsSectionOpen((prev) => !prev)}
+              >
+                {isAssignmentsSectionOpen ? (
+                  <>
+                    <ChevronUp className="mr-2 size-4" />
+                    Sembunyikan
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="mr-2 size-4" />
+                    Tampilkan
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {!selectedAcademicYearId ? (
+          {!isAssignmentsSectionOpen ? (
+            <p className="text-sm text-muted-foreground">Section disembunyikan.</p>
+          ) : !selectedAcademicYearId ? (
             <Alert>
               <AlertDescription>
                 Tahun ajaran login belum ditemukan. Silakan logout lalu login ulang.
@@ -437,41 +529,38 @@ export default function TeacherDetailPage() {
               <p className="text-sm">Belum ada penugasan guru</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kelas</TableHead>
-                  <TableHead>Mata Pelajaran</TableHead>
-                  <TableHead className="hidden md:table-cell">Tahun Ajaran</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Tanggal Penugasan</TableHead>
-                  <TableHead className="hidden lg:table-cell">Catatan</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="space-y-3 md:hidden">
                 {teachingAssignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
-                      <span className="font-medium">{assignment.class.code}</span>
-                      <span className="ml-2 text-muted-foreground">{assignment.class.name}</span>
-                    </TableCell>
-                    <TableCell>{assignment.subject.name}</TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge variant="outline">{assignment.academic_year.name}</Badge>
-                    </TableCell>
-                    <TableCell>
+                  <div key={assignment.id} className="rounded-xl border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold">
+                          {assignment.class.code} - {assignment.class.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{assignment.subject.name}</p>
+                      </div>
                       <Badge variant={assignment.is_active ? "default" : "secondary"}>
                         {assignment.is_active ? "Aktif" : "Tidak Aktif"}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
-                      {new Date(assignment.assigned_at).toLocaleDateString("id-ID")}
-                    </TableCell>
-                    <TableCell className="hidden text-muted-foreground lg:table-cell">
-                      {assignment.notes ?? "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
+                    </div>
+
+                    <div className="mt-3 space-y-1 text-sm">
+                      <p>
+                        <span className="text-muted-foreground">Tahun Ajaran:</span>{" "}
+                        {assignment.academic_year.name}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Ditugaskan:</span>{" "}
+                        {new Date(assignment.assigned_at).toLocaleDateString("id-ID")}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Catatan:</span>{" "}
+                        {assignment.notes ?? "-"}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex justify-end">
                       {assignment.is_active ? (
                         <Button
                           variant="ghost"
@@ -488,11 +577,70 @@ export default function TeacherDetailPage() {
                       ) : (
                         <span className="text-xs text-muted-foreground">-</span>
                       )}
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-xl border md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kelas</TableHead>
+                      <TableHead>Mata Pelajaran</TableHead>
+                      <TableHead className="hidden md:table-cell">Tahun Ajaran</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="hidden md:table-cell">Tanggal Penugasan</TableHead>
+                      <TableHead className="hidden lg:table-cell">Catatan</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teachingAssignments.map((assignment) => (
+                      <TableRow key={assignment.id}>
+                        <TableCell>
+                          <span className="font-medium">{assignment.class.code}</span>
+                          <span className="ml-2 text-muted-foreground">{assignment.class.name}</span>
+                        </TableCell>
+                        <TableCell>{assignment.subject.name}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <Badge variant="outline">{assignment.academic_year.name}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={assignment.is_active ? "default" : "secondary"}>
+                            {assignment.is_active ? "Aktif" : "Tidak Aktif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden text-muted-foreground md:table-cell">
+                          {new Date(assignment.assigned_at).toLocaleDateString("id-ID")}
+                        </TableCell>
+                        <TableCell className="hidden text-muted-foreground lg:table-cell">
+                          {assignment.notes ?? "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {assignment.is_active ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => {
+                                setSelectedAssignment(assignment);
+                                setShowRevokeDialog(true);
+                              }}
+                            >
+                              <Trash2 className="mr-1 size-4" />
+                              Cabut
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -515,35 +663,56 @@ export default function TeacherDetailPage() {
               <p className="text-sm">Tidak ada penugasan wali kelas</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kelas</TableHead>
-                  <TableHead>Tahun Akademik</TableHead>
-                  <TableHead className="hidden md:table-cell">Ditetapkan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="space-y-3 md:hidden">
                 {teacher.homerooms.map((hr) => (
-                  <TableRow key={hr.homeroom_assignment_id}>
-                    <TableCell>
-                      <span className="font-medium">{hr.class_code}</span>
-                      <span className="ml-2 text-muted-foreground">
-                        {hr.class_name}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {hr.academic_year_name}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
-                      {hr.assigned_at}
-                    </TableCell>
-                  </TableRow>
+                  <div key={hr.homeroom_assignment_id} className="rounded-xl border p-4">
+                    <p className="font-semibold">
+                      {hr.class_code} - {hr.class_name}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">Tahun Akademik</span>
+                      <Badge variant="outline">{hr.academic_year_name}</Badge>
+                    </div>
+                    <p className="mt-2 text-sm">
+                      <span className="text-muted-foreground">Ditetapkan:</span> {hr.assigned_at}
+                    </p>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-xl border md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kelas</TableHead>
+                      <TableHead>Tahun Akademik</TableHead>
+                      <TableHead className="hidden md:table-cell">Ditetapkan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teacher.homerooms.map((hr) => (
+                      <TableRow key={hr.homeroom_assignment_id}>
+                        <TableCell>
+                          <span className="font-medium">{hr.class_code}</span>
+                          <span className="ml-2 text-muted-foreground">
+                            {hr.class_name}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {hr.academic_year_name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden text-muted-foreground md:table-cell">
+                          {hr.assigned_at}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -566,28 +735,46 @@ export default function TeacherDetailPage() {
               <p className="text-sm">Tidak ada tugas aktif</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kode</TableHead>
-                  <TableHead>Nama Tugas</TableHead>
-                  <TableHead className="hidden md:table-cell">Ditetapkan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="space-y-3 md:hidden">
                 {teacher.duties.map((duty) => (
-                  <TableRow key={duty.code}>
-                    <TableCell>
+                  <div key={duty.code} className="rounded-xl border p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-semibold">{duty.duty_name}</p>
                       <Badge variant="secondary">{duty.code}</Badge>
-                    </TableCell>
-                    <TableCell>{duty.duty_name}</TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
-                      {duty.assigned_at}
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    <p className="mt-2 text-sm">
+                      <span className="text-muted-foreground">Ditetapkan:</span> {duty.assigned_at}
+                    </p>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-xl border md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kode</TableHead>
+                      <TableHead>Nama Tugas</TableHead>
+                      <TableHead className="hidden md:table-cell">Ditetapkan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teacher.duties.map((duty) => (
+                      <TableRow key={duty.code}>
+                        <TableCell>
+                          <Badge variant="secondary">{duty.code}</Badge>
+                        </TableCell>
+                        <TableCell>{duty.duty_name}</TableCell>
+                        <TableCell className="hidden text-muted-foreground md:table-cell">
+                          {duty.assigned_at}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -619,27 +806,25 @@ export default function TeacherDetailPage() {
 
             <div className="space-y-2">
               <Label htmlFor="subject-select">1. Pilih Mata Pelajaran</Label>
-              <Select
+              <select
+                id="subject-select"
                 value={formData.subject_id}
-                onValueChange={(value) =>
+                onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    subject_id: value,
+                    subject_id: e.target.value,
                     class_subject_ids: [],
                   }))
                 }
+                className="flex h-10 w-full rounded-xl border border-input bg-white/88 px-3 py-2 text-sm shadow-[0_8px_18px_-16px_rgba(15,23,42,0.45)] outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/50 dark:bg-input/30"
               >
-                <SelectTrigger id="subject-select">
-                  <SelectValue placeholder="Pilih mata pelajaran" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableSubjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id.toString()}>
-                      {subject.code} - {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">{isSubjectsLoading ? "Memuat mata pelajaran..." : "Pilih mata pelajaran"}</option>
+                {availableSubjects.map((subject) => (
+                  <option key={subject.id} value={subject.id.toString()}>
+                    {subject.code} - {subject.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">

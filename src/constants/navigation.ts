@@ -4,7 +4,6 @@ import {
   UserCog,
   GraduationCap,
   BookOpen,
-  CalendarDays,
   ClipboardList,
   ClipboardCheck,
   AlertTriangle,
@@ -67,12 +66,6 @@ export const sidebarNav: NavGroup[] = [
         title: "Mata Pelajaran",
         url: "/mapel",
         icon: BookOpen,
-        roles: ["admin", "kepala_sekolah", "superadmin"],
-      },
-      {
-        title: "Jadwal",
-        url: "/jadwal",
-        icon: CalendarDays,
         roles: ["admin", "kepala_sekolah", "superadmin"],
       },
       {

@@ -813,13 +813,27 @@ export default function ClassDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/kelas">
-            <ArrowLeft className="mr-2 size-4" />
-            Kembali
-          </Link>
-        </Button>
+      <div className="relative overflow-hidden rounded-3xl border border-cyan-100/80 bg-gradient-to-br from-sky-50 via-cyan-50 to-emerald-50 p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-36 w-36 rounded-full bg-cyan-200/35 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-200/30 blur-2xl" />
+
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
+              <Link to="/kelas">
+                <ArrowLeft className="mr-2 size-4" />
+                Kembali
+              </Link>
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{classData.name}</h1>
+            <p className="max-w-xl text-slate-600">Detail informasi kelas dan pengelolaan relasi akademik</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="w-fit">Kode: {classData.code}</Badge>
+            <Badge variant="outline" className="w-fit">Tingkat: {classData.level ?? "-"}</Badge>
+          </div>
+        </div>
       </div>
 
       <Card>
@@ -918,19 +932,20 @@ export default function ClassDetailPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="hidden sm:table-cell">Kode Mapel</TableHead>
-                    <TableHead>Nama Mapel</TableHead>
-                    <TableHead>Guru Pengajar</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedClassSubjects.map((mapping) => (
-                    <TableRow key={mapping.id}>
+              <div className="overflow-x-auto rounded-xl border">
+                <Table className="min-w-[860px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="hidden sm:table-cell">Kode Mapel</TableHead>
+                      <TableHead>Nama Mapel</TableHead>
+                      <TableHead>Guru Pengajar</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedClassSubjects.map((mapping) => (
+                      <TableRow key={mapping.id}>
                       <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                         {mapping.subject.code}
                       </TableCell>
@@ -1050,10 +1065,11 @@ export default function ClassDetailPage() {
                           </Button>
                         </div>
                       </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               <PaginationControls
                 currentPage={classSubjectsPage}
@@ -1140,7 +1156,8 @@ export default function ClassDetailPage() {
           description="Guru wali kelas yang saat ini bertugas"
           icon={GraduationCap}
         >
-          <Table>
+          <div className="overflow-x-auto rounded-xl border">
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="hidden sm:table-cell">NIP</TableHead>
@@ -1168,6 +1185,7 @@ export default function ClassDetailPage() {
                 ))}
               </TableBody>
             </Table>
+          </div>
         </CollapsibleSection>
       )}
 
@@ -1202,20 +1220,21 @@ export default function ClassDetailPage() {
               <p className="text-sm">Belum ada riwayat wali kelas</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="hidden sm:table-cell">NIP</TableHead>
-                  <TableHead>Nama Guru</TableHead>
-                  <TableHead className="hidden md:table-cell">Ditugaskan</TableHead>
-                  <TableHead className="hidden lg:table-cell">Berakhir</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {classData.homeroom_assignments.map((h) => (
-                  <TableRow key={h.id}>
+            <div className="overflow-x-auto rounded-xl border">
+              <Table className="min-w-[780px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="hidden sm:table-cell">NIP</TableHead>
+                    <TableHead>Nama Guru</TableHead>
+                    <TableHead className="hidden md:table-cell">Ditugaskan</TableHead>
+                    <TableHead className="hidden lg:table-cell">Berakhir</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {classData.homeroom_assignments.map((h) => (
+                    <TableRow key={h.id}>
                     <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                       {h.teacher.nip ?? "-"}
                     </TableCell>
@@ -1258,10 +1277,11 @@ export default function ClassDetailPage() {
                         )}
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
       </CollapsibleSection>
 
@@ -1461,22 +1481,23 @@ export default function ClassDetailPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="hidden sm:table-cell">NIS</TableHead>
-                    <TableHead>Nama</TableHead>
-                    <TableHead className="hidden md:table-cell">Gender</TableHead>
-                    <TableHead className="hidden lg:table-cell">Email</TableHead>
-                    <TableHead className="hidden md:table-cell">Tahun Ajaran</TableHead>
-                    <TableHead>Status Enroll</TableHead>
-                    <TableHead>Status Siswa</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedStudents.map((s) => (
-                    <TableRow key={s.enrollment.id}>
+              <div className="overflow-x-auto rounded-xl border">
+                <Table className="min-w-[980px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="hidden sm:table-cell">NIS</TableHead>
+                      <TableHead>Nama</TableHead>
+                      <TableHead className="hidden md:table-cell">Gender</TableHead>
+                      <TableHead className="hidden lg:table-cell">Email</TableHead>
+                      <TableHead className="hidden md:table-cell">Tahun Ajaran</TableHead>
+                      <TableHead>Status Enroll</TableHead>
+                      <TableHead>Status Siswa</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedStudents.map((s) => (
+                      <TableRow key={s.enrollment.id}>
                       <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                         {s.nis}
                       </TableCell>
@@ -1514,10 +1535,11 @@ export default function ClassDetailPage() {
                           )}
                         </div>
                       </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               <PaginationControls
                 currentPage={studentsPage}

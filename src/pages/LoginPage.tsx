@@ -42,6 +42,10 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
+    document.title = `Masuk — ${schoolName}`;
+  }, [schoolName]);
+
+  useEffect(() => {
     let isMounted = true;
 
     const loadAcademicYears = async () => {
@@ -196,16 +200,19 @@ export default function LoginPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email atau NIP</Label>
                   <Input
                     id="email"
-                    type="email"
-                    placeholder="guru@example.com"
+                    type="text"
+                    placeholder="Masuk dengan email (guru@example.com) atau NIP"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="email"
                   />
+                  <p className="text-xs text-slate-500">
+                    Gunakan email lengkap dengan @ atau nomor NIP Anda
+                  </p>
                 </div>
 
                 <div className="space-y-2">

@@ -387,29 +387,35 @@ export default function TeacherManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Manajemen Guru</h1>
-          <p className="text-muted-foreground">
-            Kelola data guru, status aktif, dan profil singkat
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
-            <UploadCloud className="mr-2 size-4" />
-            Import
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 size-4" />
-            Tambah Guru
-          </Button>
+      <div className="relative overflow-hidden rounded-3xl border border-cyan-100/80 bg-gradient-to-br from-sky-50 via-cyan-50 to-emerald-50 p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-36 w-36 rounded-full bg-cyan-200/35 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-200/30 blur-2xl" />
+
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Manajemen Guru</h1>
+            <p className="mt-1 text-slate-600">
+              Kelola data guru, status aktif, dan profil singkat
+            </p>
+          </div>
+
+          <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-auto">
+            <Button variant="outline" onClick={() => setImportOpen(true)} className="w-full">
+              <UploadCloud className="mr-2 size-4" />
+              Import
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} className="w-full">
+              <Plus className="mr-2 size-4" />
+              Tambah Guru
+            </Button>
+          </div>
         </div>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-3">
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -420,12 +426,12 @@ export default function TeacherManagementPage() {
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
               </div>
-              <Button onClick={handleSearch} className="w-full sm:w-auto">
+              <Button onClick={handleSearch} className="w-full lg:w-auto">
                 <Search className="mr-2 size-4" />
                 Cari
               </Button>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
               <div className="flex-1">
                 <Label htmlFor="filterSpec" className="mb-2 block text-xs font-medium text-muted-foreground">
                   Filter Mata Pelajaran
@@ -439,7 +445,7 @@ export default function TeacherManagementPage() {
                 />
               </div>
               {(search || filterSpecialization) && (
-                <Button variant="outline" onClick={clearFilters} className="mt-auto">
+                <Button variant="outline" onClick={clearFilters} className="w-full lg:w-auto">
                   Bersihkan Filter
                 </Button>
               )}
@@ -469,83 +475,151 @@ export default function TeacherManagementPage() {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="hidden sm:table-cell">NIP</TableHead>
-                    <TableHead>Nama</TableHead>
-                    <TableHead className="hidden md:table-cell">Keahlian</TableHead>
-                    <TableHead className="hidden lg:table-cell">Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
-                    <TableHead className="w-12" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {teachers.map((teacher) => (
-                    <TableRow key={teacher.id}>
-                      <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
-                        {teacher.nip}
-                      </TableCell>
-                      <TableCell>
+              <div className="space-y-3 md:hidden">
+                {teachers.map((teacher) => (
+                  <div key={teacher.id} className="rounded-xl border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
                         <Link
                           to={`/guru/${teacher.id}`}
-                          className="font-medium hover:underline"
+                          className="block truncate font-semibold hover:underline"
                         >
                           {teacher.name}
                         </Link>
-                      </TableCell>
-                      <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-                        {teacher.specialization ?? "-"}
-                      </TableCell>
-                      <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
-                        {teacher.email ?? "-"}
-                      </TableCell>
-                      <TableCell>
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">NIP: {teacher.nip}</p>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8 shrink-0">
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem asChild>
+                            <Link to={`/guru/${teacher.id}`}>
+                              <Eye className="mr-2 size-4" />
+                              Detail
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditTeacher(teacher.id)}>
+                            <Pencil className="mr-2 size-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setToggleTeacher(teacher)}>
+                            <Power className="mr-2 size-4" />
+                            {teacher.is_active ? "Nonaktifkan" : "Aktifkan"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeleteTeacher(teacher)}
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">Keahlian</span>
+                        <span className="truncate text-right">{teacher.specialization ?? "-"}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">Status</span>
                         <Badge variant={teacher.is_active ? "default" : "secondary"}>
                           {teacher.is_active ? "Aktif" : "Nonaktif"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
-                        {teacher.created_at}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/guru/${teacher.id}`}>
-                                <Eye className="mr-2 size-4" />
-                                Detail
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditTeacher(teacher.id)}>
-                              <Pencil className="mr-2 size-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setToggleTeacher(teacher)}>
-                              <Power className="mr-2 size-4" />
-                              {teacher.is_active ? "Nonaktifkan" : "Aktifkan"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => setDeleteTeacher(teacher)}
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Hapus
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">Dibuat</span>
+                        <span className="text-right text-xs text-muted-foreground">{teacher.created_at}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-xl border md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>NIP</TableHead>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Keahlian</TableHead>
+                      <TableHead className="hidden lg:table-cell">Email</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="hidden lg:table-cell">Dibuat</TableHead>
+                      <TableHead className="w-12" />
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {teachers.map((teacher) => (
+                      <TableRow key={teacher.id}>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {teacher.nip}
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            to={`/guru/${teacher.id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {teacher.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {teacher.specialization ?? "-"}
+                        </TableCell>
+                        <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
+                          {teacher.email ?? "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={teacher.is_active ? "default" : "secondary"}>
+                            {teacher.is_active ? "Aktif" : "Nonaktif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
+                          {teacher.created_at}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="size-8">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem asChild>
+                                <Link to={`/guru/${teacher.id}`}>
+                                  <Eye className="mr-2 size-4" />
+                                  Detail
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEditTeacher(teacher.id)}>
+                                <Pencil className="mr-2 size-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setToggleTeacher(teacher)}>
+                                <Power className="mr-2 size-4" />
+                                {teacher.is_active ? "Nonaktifkan" : "Aktifkan"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => setDeleteTeacher(teacher)}
+                              >
+                                <Trash2 className="mr-2 size-4" />
+                                Hapus
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               {meta && (
                 <PaginationControls

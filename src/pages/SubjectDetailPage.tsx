@@ -76,13 +76,28 @@ export default function SubjectDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/mapel">
-            <ArrowLeft className="mr-2 size-4" />
-            Kembali
-          </Link>
-        </Button>
+      <div className="relative overflow-hidden rounded-3xl border border-cyan-100/80 bg-gradient-to-br from-sky-50 via-cyan-50 to-emerald-50 p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-36 w-36 rounded-full bg-cyan-200/35 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-200/30 blur-2xl" />
+
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
+              <Link to="/mapel">
+                <ArrowLeft className="mr-2 size-4" />
+                Kembali
+              </Link>
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{subject.name}</h1>
+            <p className="text-slate-600">Detail informasi mata pelajaran</p>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary">Kode: {subject.code}</Badge>
+              <Badge variant={subject.is_active ? "default" : "secondary"}>
+                {subject.is_active ? "Aktif" : "Nonaktif"}
+              </Badge>
+            </div>
+          </div>
+        </div>
       </div>
 
       <Card>
@@ -119,11 +134,11 @@ export default function SubjectDetailPage() {
                 </div>
               </div>
               <div className="flex items-start gap-2 rounded-lg border p-3">
-                <div>
+                <div className="w-full">
                   <p className="text-xs text-muted-foreground">Status</p>
                   <Badge
                     variant={subject.is_active ? "default" : "secondary"}
-                    className="mt-1"
+                    className="mt-1 w-fit"
                   >
                     {subject.is_active ? "Aktif" : "Nonaktif"}
                   </Badge>
@@ -143,12 +158,12 @@ export default function SubjectDetailPage() {
             )}
 
             {/* Timestamps */}
-            <div className="grid gap-3 sm:grid-cols-2 border-t pt-4">
-              <div className="text-xs text-muted-foreground">
+            <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
+              <div className="rounded-lg border bg-slate-50 p-3 text-xs text-muted-foreground">
                 <p className="font-medium">Dibuat</p>
                 <p>{new Date(subject.created_at).toLocaleString("id-ID")}</p>
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="rounded-lg border bg-slate-50 p-3 text-xs text-muted-foreground">
                 <p className="font-medium">Diperbarui</p>
                 <p>{new Date(subject.updated_at).toLocaleString("id-ID")}</p>
               </div>

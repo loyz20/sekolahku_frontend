@@ -262,22 +262,27 @@ export default function SubjectManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Manajemen Mata Pelajaran</h1>
-          <p className="text-muted-foreground">
-            Kelola data mata pelajaran dan status aktif
-          </p>
+      <div className="relative overflow-hidden rounded-3xl border border-cyan-100/80 bg-gradient-to-br from-sky-50 via-cyan-50 to-emerald-50 p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-36 w-36 rounded-full bg-cyan-200/35 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-200/30 blur-2xl" />
+
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Manajemen Mata Pelajaran</h1>
+            <p className="mt-1 text-slate-600">
+              Kelola data mata pelajaran dan status aktif
+            </p>
+          </div>
+          <Button onClick={() => setCreateOpen(true)} className="w-full lg:w-auto">
+            <Plus className="mr-2 size-4" />
+            Tambah Mata Pelajaran
+          </Button>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Tambah Mata Pelajaran
-        </Button>
       </div>
 
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -288,7 +293,7 @@ export default function SubjectManagementPage() {
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <Button onClick={handleSearch}>
+            <Button onClick={handleSearch} className="w-full lg:w-auto">
               <Search className="mr-2 size-4" />
               Cari
             </Button>
@@ -317,74 +322,139 @@ export default function SubjectManagementPage() {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Kode</TableHead>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Deskripsi</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-10 text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {subjects.map((subject) => (
-                    <TableRow key={subject.id}>
-                      <TableCell>
-                        <Badge variant="secondary">{subject.code}</Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{subject.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {subject.description ? (
-                          <span className="line-clamp-2">{subject.description}</span>
-                        ) : (
-                          <span className="italic">Tidak ada deskripsi</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={subject.is_active ? "default" : "secondary"}
+              <div className="space-y-3 md:hidden">
+                {subjects.map((subject) => (
+                  <div key={subject.id} className="rounded-xl border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link
+                          to={`/mapel/${subject.id}`}
+                          className="block truncate font-semibold hover:underline"
                         >
+                          {subject.name}
+                        </Link>
+                        <div className="mt-1">
+                          <Badge variant="secondary">{subject.code}</Badge>
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8 shrink-0">
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem asChild>
+                            <Link to={`/mapel/${subject.id}`}>
+                              <Eye className="mr-2 size-4" />
+                              Detail
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditSubject(subject.id)}>
+                            <Pencil className="mr-2 size-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setToggleSubject(subject)}>
+                            <Power className="mr-2 size-4" />
+                            {subject.is_active ? "Nonaktifkan" : "Aktifkan"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeleteSubject(subject)}
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="mt-3 space-y-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge variant={subject.is_active ? "default" : "secondary"}>
                           {subject.is_active ? "Aktif" : "Nonaktif"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/mapel/${subject.id}`}>
-                                <Eye className="mr-2 size-4" />
-                                Detail
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditSubject(subject.id)}>
-                              <Pencil className="mr-2 size-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setToggleSubject(subject)}>
-                              <Power className="mr-2 size-4" />
-                              {subject.is_active ? "Nonaktifkan" : "Aktifkan"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => setDeleteSubject(subject)}
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Hapus
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                      </div>
+                      <p className="text-muted-foreground">
+                        {subject.description ? subject.description : "Tidak ada deskripsi"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-xl border md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kode</TableHead>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Deskripsi</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-10 text-right">Aksi</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {subjects.map((subject) => (
+                      <TableRow key={subject.id}>
+                        <TableCell>
+                          <Badge variant="secondary">{subject.code}</Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{subject.name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {subject.description ? (
+                            <span className="line-clamp-2">{subject.description}</span>
+                          ) : (
+                            <span className="italic">Tidak ada deskripsi</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={subject.is_active ? "default" : "secondary"}
+                          >
+                            {subject.is_active ? "Aktif" : "Nonaktif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="size-8">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem asChild>
+                                <Link to={`/mapel/${subject.id}`}>
+                                  <Eye className="mr-2 size-4" />
+                                  Detail
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEditSubject(subject.id)}>
+                                <Pencil className="mr-2 size-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setToggleSubject(subject)}>
+                                <Power className="mr-2 size-4" />
+                                {subject.is_active ? "Nonaktifkan" : "Aktifkan"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => setDeleteSubject(subject)}
+                              >
+                                <Trash2 className="mr-2 size-4" />
+                                Hapus
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               {meta && (
                 <PaginationControls

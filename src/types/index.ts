@@ -614,14 +614,17 @@ export interface TeachingAssignment {
 
 export interface ScheduleSlot {
   id: number;
-  teaching_assignment_id?: number;
+  class_subject_id?: number | null;
+  teaching_assignment_id?: number | null;
+  slot_type?: "lesson" | "ceremony" | "break";
+  title?: string | null;
   day_of_week: number; // 1-7 (Mon-Sun)
   start_time: string; // HH:mm:ss
   end_time: string; // HH:mm:ss
   room: string | null;
   notes: string | null;
   subject?: { id: number; code: string; name: string };
-  teacher?: { id: number; name: string; nip: string };
+  teacher?: { id: number; name: string; nip: string } | null;
   class?: { id: number; code: string; name: string };
 }
 
@@ -666,23 +669,6 @@ export interface CreateTeachingAssignmentRequest {
   class_subject_id: number;
   teacher_id: number;
   notes?: string;
-}
-
-export interface CreateScheduleSlotRequest {
-  teaching_assignment_id: number;
-  day_of_week: number;
-  start_time: string;
-  end_time: string;
-  room?: string;
-  notes?: string;
-}
-
-export interface UpdateScheduleSlotRequest {
-  day_of_week?: number;
-  start_time?: string;
-  end_time?: string;
-  room?: string | null;
-  notes?: string | null;
 }
 
 export interface ClassSubjectListParams {

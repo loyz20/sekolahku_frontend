@@ -55,7 +55,7 @@ export const teacherService = {
     const res = await api.post<ApiResponse<{ created: number; errors: Array<{ row: number; error: string }> }>>(
       "/v1/teachers/import",
       fd,
-      { headers: { "Content-Type": "multipart/form-data" } }
+      undefined
     );
     return res.data;
   },

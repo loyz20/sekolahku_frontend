@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
@@ -88,7 +88,7 @@ export default function StudentDetailPage() {
     [student]
   );
 
-  async function loadStudent() {
+  const loadStudent = useCallback(async () => {
     if (!studentId) return;
     setIsLoading(true);
     try {
@@ -104,9 +104,9 @@ export default function StudentDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [studentId]);
 
-  async function loadReferenceData() {
+  const loadReferenceData = useCallback(async () => {
     try {
       const [classesRes, yearsRes] = await Promise.all([
         classService.list({ limit: 100 }),
@@ -117,12 +117,12 @@ export default function StudentDetailPage() {
     } catch {
       // Keep detail usable even if reference data fails.
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadStudent();
-    loadReferenceData();
-  }, [studentId]);
+    void loadStudent();
+    void loadReferenceData();
+  }, [loadStudent, loadReferenceData]);
 
   async function handleEnroll() {
     if (!student || !selectedClassId || !selectedAcademicYearId) {
@@ -291,31 +291,28 @@ export default function StudentDetailPage() {
               <p className="text-sm">Belum ada enrollment aktif</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kelas</TableHead>
-                  <TableHead>Tahun Ajaran</TableHead>
-                  <TableHead>Tanggal Mulai</TableHead>
-                  <TableHead className="w-20" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="grid gap-3 md:hidden">
                 {activeEnrollments.map((enrollment) => (
-                  <TableRow key={enrollment.id}>
-                    <TableCell>
-                      <span className="font-medium">{enrollment.class.code}</span>
-                      <span className="ml-2 text-muted-foreground">
-                        {enrollment.class.name}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{enrollment.academic_year.name}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {enrollment.enrollment_date}
-                    </TableCell>
-                    <TableCell>
+                  <div key={enrollment.id} className="rounded-xl border bg-card p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{enrollment.class.code}</p>
+                        <p className="text-sm text-muted-foreground">{enrollment.class.name}</p>
+                      </div>
+                      <Badge>Aktif</Badge>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Tahun Ajaran</p>
+                        <p className="text-sm">{enrollment.academic_year.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Tanggal Mulai</p>
+                        <p className="text-sm">{enrollment.enrollment_date}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex justify-end">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -324,11 +321,53 @@ export default function StudentDetailPage() {
                       >
                         <Trash2 className="size-4" />
                       </Button>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden rounded-xl border md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kelas</TableHead>
+                      <TableHead>Tahun Ajaran</TableHead>
+                      <TableHead className="hidden lg:table-cell">Tanggal Mulai</TableHead>
+                      <TableHead className="w-20 text-right" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activeEnrollments.map((enrollment) => (
+                      <TableRow key={enrollment.id} className="hover:bg-muted/30">
+                        <TableCell>
+                          <div className="space-y-0.5">
+                            <p className="font-semibold text-foreground">{enrollment.class.code}</p>
+                            <p className="text-sm text-muted-foreground">{enrollment.class.name}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="max-w-[300px] whitespace-normal break-words text-left leading-5">
+                            {enrollment.academic_year.name}
+                          </Badge>
+                          <p className="mt-1 text-xs text-muted-foreground lg:hidden">Mulai: {enrollment.enrollment_date}</p>
+                        </TableCell>
+                        <TableCell className="hidden text-muted-foreground lg:table-cell">{enrollment.enrollment_date}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-destructive"
+                            onClick={() => setDisenrollEnrollmentId(enrollment.id)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -347,41 +386,78 @@ export default function StudentDetailPage() {
               <p className="text-sm">Belum ada riwayat enrollment</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kelas</TableHead>
-                  <TableHead>Tahun Ajaran</TableHead>
-                  <TableHead>Mulai</TableHead>
-                  <TableHead>Selesai</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="grid gap-3 md:hidden">
                 {student.enrollments.map((enrollment) => (
-                  <TableRow key={enrollment.id}>
-                    <TableCell>
-                      <span className="font-medium">{enrollment.class.code}</span>
-                      <span className="ml-2 text-muted-foreground">
-                        {enrollment.class.name}
-                      </span>
-                    </TableCell>
-                    <TableCell>{enrollment.academic_year.name}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {enrollment.enrollment_date}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {enrollment.ended_date ?? "-"}
-                    </TableCell>
-                    <TableCell>
+                  <div key={enrollment.id} className="rounded-xl border bg-card p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{enrollment.class.code}</p>
+                        <p className="text-sm text-muted-foreground">{enrollment.class.name}</p>
+                      </div>
                       <Badge variant={enrollment.is_active ? "default" : "secondary"}>
                         {enrollment.is_active ? "Aktif" : "Selesai"}
                       </Badge>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Tahun Ajaran</p>
+                        <p className="text-sm">{enrollment.academic_year.name}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Mulai</p>
+                          <p className="text-sm">{enrollment.enrollment_date}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Selesai</p>
+                          <p className="text-sm">{enrollment.ended_date ?? "-"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden rounded-xl border md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kelas</TableHead>
+                      <TableHead>Tahun Ajaran</TableHead>
+                      <TableHead className="hidden lg:table-cell">Mulai</TableHead>
+                      <TableHead className="hidden lg:table-cell">Selesai</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {student.enrollments.map((enrollment) => (
+                      <TableRow key={enrollment.id} className="hover:bg-muted/30">
+                        <TableCell>
+                          <div className="space-y-0.5">
+                            <p className="font-semibold text-foreground">{enrollment.class.code}</p>
+                            <p className="text-sm text-muted-foreground">{enrollment.class.name}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="max-w-[320px] break-words text-sm">{enrollment.academic_year.name}</p>
+                          <p className="mt-1 text-xs text-muted-foreground lg:hidden">
+                            Mulai: {enrollment.enrollment_date} {" | "} Selesai: {enrollment.ended_date ?? "-"}
+                          </p>
+                        </TableCell>
+                        <TableCell className="hidden text-muted-foreground lg:table-cell">{enrollment.enrollment_date}</TableCell>
+                        <TableCell className="hidden text-muted-foreground lg:table-cell">{enrollment.ended_date ?? "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant={enrollment.is_active ? "default" : "secondary"}>
+                            {enrollment.is_active ? "Aktif" : "Selesai"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

@@ -3,15 +3,12 @@ import type {
   ClassSubjectMapping,
   ClassSubjectListParams,
   CreateClassSubjectRequest,
-  CreateScheduleSlotRequest,
   CreateTeachingAssignmentRequest,
-  ScheduleSlot,
   StudentScheduleView,
   TeacherScheduleView,
   TeachingAssignment,
   TeachingAssignmentListParams,
   ClassScheduleView,
-  UpdateScheduleSlotRequest,
 } from "@/types";
 
 const ENDPOINT = "/v1/schedules";
@@ -113,33 +110,4 @@ export const scheduleService = {
     return response.data;
   },
 
-  // Schedule Slot Management
-  createScheduleSlot: async (data: CreateScheduleSlotRequest) => {
-    const response = await api.post<{
-      success: boolean;
-      message: string;
-      data: ScheduleSlot;
-    }>(`${ENDPOINT}/slots`, data);
-    return response.data;
-  },
-
-  updateScheduleSlot: async (
-    slotId: number,
-    data: UpdateScheduleSlotRequest
-  ) => {
-    const response = await api.patch<{
-      success: boolean;
-      message: string;
-      data: ScheduleSlot;
-    }>(`${ENDPOINT}/slots/${slotId}`, data);
-    return response.data;
-  },
-
-  deleteScheduleSlot: async (slotId: number) => {
-    const response = await api.delete<{
-      success: boolean;
-      message: string;
-    }>(`${ENDPOINT}/slots/${slotId}`);
-    return response.data;
-  },
 };

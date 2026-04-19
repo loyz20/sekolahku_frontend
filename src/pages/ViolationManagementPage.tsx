@@ -169,9 +169,21 @@ export default function ViolationManagementPage() {
     notes: "",
   });
   const [formStudents, setFormStudents] = useState<ClassStudentItem[]>([]);
+  const [formStudentSearch, setFormStudentSearch] = useState("");
   const [isLoadingFormStudents, setIsLoadingFormStudents] = useState(false);
 
   const activeTypes = useMemo(() => violationTypes.filter((item) => item.is_active), [violationTypes]);
+
+  const filteredFormStudents = useMemo(() => {
+    const keyword = formStudentSearch.trim().toLowerCase();
+    if (!keyword) return formStudents;
+
+    return formStudents.filter((item) => {
+      const name = item.name?.toLowerCase() || "";
+      const nis = item.nis?.toLowerCase() || "";
+      return name.includes(keyword) || nis.includes(keyword);
+    });
+  }, [formStudents, formStudentSearch]);
 
   const loadReferences = useCallback(async () => {
     try {
@@ -352,6 +364,7 @@ export default function ViolationManagementPage() {
 
     setViolationForm(emptyViolationForm());
     setFormStudents([]);
+    setFormStudentSearch("");
     setCreateOpen(true);
   }
 
@@ -543,53 +556,59 @@ export default function ViolationManagementPage() {
           <CardDescription>Filter dan kelola pelanggaran siswa.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <div className="md:col-span-3 xl:col-span-3">
               <Input
                 placeholder="Cari siswa (nama/NIS) atau deskripsi"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Select value={classFilter} onValueChange={setClassFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Semua kelas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua kelas</SelectItem>
-                {classes.map((item) => (
-                  <SelectItem key={item.id} value={String(item.id)}>
-                    {item.code} - {item.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Semua jenis" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua jenis</SelectItem>
-                {violationTypes.map((item) => (
-                  <SelectItem key={item.id} value={String(item.id)}>
-                    {item.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={severityFilter} onValueChange={(value) => setSeverityFilter(value as "all" | ViolationSeverity)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Semua tingkat" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua tingkat</SelectItem>
-                {(["minor", "moderate", "severe"] as ViolationSeverity[]).map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {SEVERITY_LABEL[item]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="xl:col-span-1">
+              <Select value={classFilter} onValueChange={setClassFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Semua kelas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua kelas</SelectItem>
+                  {classes.map((item) => (
+                    <SelectItem key={item.id} value={String(item.id)}>
+                      {item.code} - {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="xl:col-span-1">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Semua jenis" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua jenis</SelectItem>
+                  {violationTypes.map((item) => (
+                    <SelectItem key={item.id} value={String(item.id)}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="xl:col-span-1">
+              <Select value={severityFilter} onValueChange={(value) => setSeverityFilter(value as "all" | ViolationSeverity)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Semua tingkat" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua tingkat</SelectItem>
+                  {(["minor", "moderate", "severe"] as ViolationSeverity[]).map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {SEVERITY_LABEL[item]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {isLoading ? (
@@ -676,101 +695,22 @@ export default function ViolationManagementPage() {
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
+        <DialogContent className="w-[96vw] max-w-3xl overflow-hidden">
           <DialogHeader>
             <DialogTitle>Tambah Pelanggaran</DialogTitle>
             <DialogDescription>Input pelanggaran siswa baru.</DialogDescription>
           </DialogHeader>
-          <form className="space-y-4" onSubmit={handleCreateViolation}>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <form className="max-h-[calc(90vh-8rem)] space-y-4 overflow-y-auto pr-1" onSubmit={handleCreateViolation}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Kelas</Label>
-                <Select
-                  value={violationForm.class_id}
-                  onValueChange={(value) => setViolationForm((prev) => ({ ...prev, class_id: value, student_ids: [] }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kelas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="-">Pilih kelas</SelectItem>
-                    {classes.map((item) => (
-                      <SelectItem key={item.id} value={String(item.id)}>
-                        {item.code} - {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Tanggal Pelanggaran</Label>
+                <Input
+                  type="date"
+                  value={violationForm.violation_date}
+                  onChange={(e) => setViolationForm((prev) => ({ ...prev, violation_date: e.target.value }))}
+                />
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Siswa</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      setViolationForm((prev) => ({
-                        ...prev,
-                        student_ids: formStudents.map((item) => String(item.id)),
-                      }))
-                    }
-                    disabled={violationForm.class_id === "-" || !formStudents.length}
-                  >
-                    Pilih Semua
-                  </Button>
-                </div>
-                <div className="rounded-xl border bg-white/80 p-3">
-                  {violationForm.class_id === "-" ? (
-                    <p className="text-sm text-muted-foreground">Pilih kelas terlebih dahulu.</p>
-                  ) : isLoadingFormStudents ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Memuat siswa...
-                    </div>
-                  ) : !formStudents.length ? (
-                    <p className="text-sm text-muted-foreground">Tidak ada siswa aktif di kelas ini.</p>
-                  ) : (
-                    <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                      {formStudents.map((item) => {
-                        const checked = violationForm.student_ids.includes(String(item.id));
-
-                        return (
-                          <label
-                            key={item.id}
-                            className="flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 hover:bg-muted/40"
-                          >
-                            <Checkbox
-                              checked={checked}
-                              onCheckedChange={(nextChecked) => {
-                                setViolationForm((prev) => ({
-                                  ...prev,
-                                  student_ids: nextChecked
-                                    ? [...prev.student_ids, String(item.id)]
-                                    : prev.student_ids.filter((studentId) => studentId !== String(item.id)),
-                                }));
-                              }}
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium">{item.name}</p>
-                              <p className="text-xs text-muted-foreground">NIS: {item.nis}</p>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                {violationForm.student_ids.length ? (
-                  <p className="text-xs text-muted-foreground">
-                    {violationForm.student_ids.length} siswa dipilih.
-                  </p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Jenis Pelanggaran</Label>
                 <Select
@@ -783,7 +723,7 @@ export default function ViolationManagementPage() {
                     }
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Pilih jenis" />
                   </SelectTrigger>
                   <SelectContent>
@@ -795,15 +735,6 @@ export default function ViolationManagementPage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tanggal Pelanggaran</Label>
-                <Input
-                  type="date"
-                  value={violationForm.violation_date}
-                  onChange={(e) => setViolationForm((prev) => ({ ...prev, violation_date: e.target.value }))}
-                />
               </div>
             </div>
 
@@ -825,6 +756,105 @@ export default function ViolationManagementPage() {
                 onChange={(e) => setViolationForm((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Contoh: Tidak memakai atribut lengkap saat upacara"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Kelas</Label>
+              <Select
+                value={violationForm.class_id}
+                onValueChange={(value) => {
+                  setViolationForm((prev) => ({ ...prev, class_id: value, student_ids: [] }));
+                  setFormStudentSearch("");
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih kelas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="-">Pilih kelas</SelectItem>
+                  {classes.map((item) => (
+                    <SelectItem key={item.id} value={String(item.id)}>
+                      {item.code} - {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Siswa</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setViolationForm((prev) => ({
+                      ...prev,
+                      student_ids: filteredFormStudents.map((item) => String(item.id)),
+                    }))
+                  }
+                  disabled={violationForm.class_id === "-" || !filteredFormStudents.length}
+                >
+                  Pilih Semua
+                </Button>
+              </div>
+              <div className="rounded-xl border bg-white/80 p-3">
+                {violationForm.class_id === "-" ? (
+                  <p className="text-sm text-muted-foreground">Pilih kelas terlebih dahulu.</p>
+                ) : isLoadingFormStudents ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Memuat siswa...
+                  </div>
+                ) : !formStudents.length ? (
+                  <p className="text-sm text-muted-foreground">Tidak ada siswa aktif di kelas ini.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <Input
+                      value={formStudentSearch}
+                      onChange={(e) => setFormStudentSearch(e.target.value)}
+                      placeholder="Cari siswa (nama atau NIS)"
+                    />
+                    <div className="max-h-56 space-y-2 overflow-y-auto overflow-x-hidden pr-1">
+                      {filteredFormStudents.map((item) => {
+                      const checked = violationForm.student_ids.includes(String(item.id));
+
+                      return (
+                        <label
+                          key={item.id}
+                          className="flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 hover:bg-muted/40"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(nextChecked) => {
+                              setViolationForm((prev) => ({
+                                ...prev,
+                                student_ids: nextChecked
+                                  ? [...prev.student_ids, String(item.id)]
+                                  : prev.student_ids.filter((studentId) => studentId !== String(item.id)),
+                              }));
+                            }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="break-words text-sm font-medium leading-snug">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">NIS: {item.nis}</p>
+                          </div>
+                        </label>
+                      );
+                      })}
+                      {!filteredFormStudents.length ? (
+                        <p className="text-sm text-muted-foreground">Siswa tidak ditemukan untuk kata kunci tersebut.</p>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {violationForm.student_ids.length ? (
+                <p className="text-xs text-muted-foreground">
+                  {violationForm.student_ids.length} siswa dipilih.
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
